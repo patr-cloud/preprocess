@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "preprocess",
+    "preprocess_derive",
+    "preprocess_derive_test"
+]

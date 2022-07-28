@@ -1,0 +1,12 @@
+[package]
+name = "preprocess_derive_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+quote = "1"
+serde_json = "1"
+syn = { version = "1" }
+preprocess_derive = { path = "../preprocess_derive" }
+serde = { version = "*", features = ["derive"] }
+preprocess = { path = "../preprocess" }
