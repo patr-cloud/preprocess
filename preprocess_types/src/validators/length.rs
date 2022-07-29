@@ -5,6 +5,7 @@ use std::{
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::{PreProcessError, PreProcessor};
 
@@ -266,8 +267,9 @@ impl<H: HasLength> PreProcessor for LengthValidator<H> {
 		self.args
 	}
 
-	fn set_args(&mut self, args: Self::Args) {
-		self.args = args;
+	fn set_args(&mut self, args: Value) -> Result<(), PreProcessError> {
+		self.args = serde_json::from_value(args).map_err(|_| PreProcessError {})?;
+		Ok(())
 	}
 }
 

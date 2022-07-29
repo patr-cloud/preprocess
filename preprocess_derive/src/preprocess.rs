@@ -1,19 +1,29 @@
+use std::collections::HashMap;
+
+use preprocess_types::validators::LengthValidatorArgs;
 use proc_macro::TokenStream;
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::{format_ident, quote, ToTokens};
 use serde_json::{Map, Value};
 use syn::{
 	spanned::Spanned,
+	token::{Brace, Colon, Paren},
 	Attribute,
+	Data,
 	DeriveInput,
 	Error,
+	Fields,
 	Lit,
 	Meta::{self, List, NameValue, Path},
 	NestedMeta,
 	Result,
+	Type,
+	Visibility,
 };
 
 #[derive(Debug)]
 pub struct PreProcessorAttribute {
-	pub preprocessor_type: String,
+	pub preprocessor_type: TokenStream2,
 	pub output_type: Option<String>,
 	pub args: Map<String, Value>,
 }
@@ -21,11 +31,13 @@ pub struct PreProcessorAttribute {
 pub fn parse(input: TokenStream) -> TokenStream {
 	let DeriveInput {
 		attrs,
-		vis: _,
+		vis,
 		ident,
-		generics: _,
-		data: _,
+		generics,
+		data,
 	} = syn::parse::<DeriveInput>(input).unwrap();
+
+	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
 	let _global_args = match parse_attributes(attrs, ident.to_string(), false) {
 		Ok(attrs) => attrs,
@@ -34,38 +46,449 @@ pub fn parse(input: TokenStream) -> TokenStream {
 		}
 	};
 
-	// let processed_type_name = format_ident!("{ident}Processed");
-	// let processed_type = match data {
-	// 	Data::Struct(_) => format_ident!("struct"),
-	// 	Data::Enum(_) => format_ident!("enum"),
-	// 	Data::Union(_) => todo!(),
-	// };
+	let processed_type_name = format_ident!("{ident}Processed");
+	let processed_type = match data {
+		Data::Struct(_) => format_ident!("struct"),
+		Data::Enum(_) => format_ident!("enum"),
+		Data::Union(_) => {
+			return Error::new(
+				ident.span(),
+				"unions are currently not supported",
+			)
+			.into_compile_error()
+			.into()
+		}
+	};
 
-	// let processed_data = match data {
-	// 	Data::Struct(data) => data.fields,
-	// 	Data::Enum(data) => data.variants.into_iter().next().unwrap().fields,
-	// 	Data::Union(_) => todo!(),
-	// };
+	let mut field_args = match data {
+		Data::Struct(data) => {
+			let span = data.struct_token.span();
+			let result = get_preprocessors_from_fields(span, data.fields);
+			let result = match result {
+				Ok(value) => value,
+				Err(error) => return error.into_compile_error().into(),
+			};
 
-	// let a: TokenStream = quote::quote! {
-	// 	impl preprocess::PreProcessor for #ident {
-	// 		type Args = ();
-	// 		type Processed = #processed_type_name;
+			let mut map = HashMap::new();
+			map.insert("-".to_string(), result);
+			map
+		}
+		Data::Enum(data) => {
+			let result = data
+				.variants
+				.into_iter()
+				.map(|variant| {
+					let span = variant.span();
+					let result =
+						get_preprocessors_from_fields(span, variant.fields)?;
 
-	// 		fn preprocess(self) -> Result<Self::Processed, PreProcessError> {
-	// 			Ok(#processed_type_name {
-	// 				#processed_data
-	// 			})
-	// 		}
-	// 	}
+					Ok((variant.ident.to_string(), result))
+				})
+				.collect::<Result<_>>();
+			match result {
+				Ok(value) => value,
+				Err(error) => return error.into_compile_error().into(),
+			}
+		}
+		Data::Union(_) => unreachable!(),
+	};
 
-	// 	#vis #processed_type #processed_type_name {
-	// 		#processed_data
-	// 	}
-	// }
-	// .into();
+	let (processor, new_type_data) = if let Some((_, paren, fields)) =
+		field_args.remove("-")
+	{
+		// Process it as a struct
+		let destructure_struct_name = format_ident!("{}", ident);
+		let og_field_names =
+			fields.iter().enumerate().map(|(index, (_, ident, ..))| {
+				format_ident!(
+					"{}",
+					ident
+						.as_ref()
+						.map(|ident| ident.to_string())
+						.unwrap_or(format!("field_{}", index))
+				)
+			});
+		let populate_variables = og_field_names.clone();
+		let destructor_preprocessors = if paren.is_some() {
+			quote! {
+				let #destructure_struct_name(
+					#(#og_field_names),*
+				) = self;
+			}
+		} else {
+			quote! {
+				let #destructure_struct_name {
+					#(#og_field_names),*
+				} = self;
+			}
+		};
+		let field_processors = fields
+			.iter()
+			.enumerate()
+			.map(|(index, (_, ident, _, _, _, attrs))| {
+				let field_name = format_ident!(
+					"{}",
+					ident
+						.as_ref()
+						.map(|ident| ident.to_string())
+						.unwrap_or(format!("field_{}", index))
+				);
+				attrs
+					.iter()
+					.enumerate()
+					.map(|(index, attr)| {
+						// Preprocess each field
+						let resulting_name = if index == attrs.len() - 1 {
+							format_ident!("{}", field_name)
+						} else {
+							format_ident!(
+								"preprocessed_{}_{}",
+								field_name,
+								index
+							)
+						};
+						let preprocessor = attr.preprocessor_type.clone();
+						let from_name = if index == 0 {
+							format_ident!("{}", field_name)
+						} else {
+							format_ident!(
+								"preprocessed_{}_{}",
+								field_name,
+								index - 1
+							)
+						};
+						let (mutable, args) = if attr.args.is_empty() {
+							(quote! {}, quote! {})
+						} else {
+							let args = attr_args_to_map(Value::Object(
+								attr.args.clone(),
+							));
+							(
+								quote! {mut},
+								quote! {
+									preprocessor.set_args(#args);
+								},
+							)
+						};
+						quote! {
+							let #resulting_name = {
+								let #mutable preprocessor = #preprocessor ::from(#from_name);
+								#args
+								preprocessor.preprocess()?
+							};
+						}
+					})
+					.collect::<TokenStream2>()
+			})
+			.collect::<TokenStream2>();
 
-	"".parse().unwrap()
+		let new_type_fields = fields
+			.iter()
+			.map(|(vis, ident, _, ty, _, processors)| {
+				if processors.is_empty() {
+					if let Some(ident) = ident {
+						quote! {
+							#ident: #ty,
+						}
+					} else {
+						quote! {
+							#ty,
+						}
+					}
+				} else {
+					let last_preprocessor_name =
+						processors.last().unwrap().preprocessor_type.clone();
+					if let Some(ident) = ident {
+						quote! {
+							#vis #ident: <#last_preprocessor_name as preprocess::PreProcessor>::Processed,
+						}
+					} else {
+						quote! {
+							#vis <#last_preprocessor_name as preprocess::PreProcessor>::Processed,
+						}
+					}
+				}
+			})
+			.collect::<TokenStream2>();
+		(
+			quote! {
+				#destructor_preprocessors
+				#field_processors
+				Ok(#processed_type_name {
+					#(#populate_variables),*
+				})
+			},
+			if paren.is_some() {
+				quote! {
+					#vis #processed_type #processed_type_name #ty_generics #where_clause (
+						#new_type_fields
+					)
+				}
+			} else {
+				quote! {
+					#vis #processed_type #processed_type_name #ty_generics #where_clause {
+						#new_type_fields
+					}
+				}
+			},
+		)
+	} else {
+		// Process it as an enum
+		let variant_processors = field_args
+			.iter()
+			.map(|(variant, (_, paren, fields))| {
+				let variant_name = format_ident!("{}", variant);
+				let og_field_names =
+					fields.iter().enumerate().map(|(index, (_, ident, ..))| {
+						format_ident!(
+							"{}",
+							ident
+								.as_ref()
+								.map(|ident| ident.to_string())
+								.unwrap_or(format!("field_{}", index))
+						)
+					});
+				let populate_variables = og_field_names.clone();
+				let field_processors = fields
+					.iter()
+					.enumerate()
+					.map(|(index, (_, ident, _, _, _, attrs))| {
+						let field_name = format_ident!(
+							"{}",
+							ident
+								.as_ref()
+								.map(|ident| ident.to_string())
+								.unwrap_or(format!("field_{}", index))
+						);
+						attrs
+							.iter()
+							.enumerate()
+							.map(|(index, attr)| {
+								// Preprocess each field
+								let resulting_name = if index == attrs.len() - 1
+								{
+									format_ident!("{}", field_name)
+								} else {
+									format_ident!(
+										"preprocessed_{}_{}",
+										field_name,
+										index
+									)
+								};
+								let preprocessor =
+									attr.preprocessor_type.clone();
+								let from_name = if index == 0 {
+									format_ident!("{}", field_name)
+								} else {
+									format_ident!(
+										"preprocessed_{}_{}",
+										field_name,
+										index - 1
+									)
+								};
+								let (mutable, args) = if attr.args.is_empty() {
+									(quote! {}, quote! {})
+								} else {
+									let args = attr_args_to_map(Value::Object(
+										attr.args.clone(),
+									));
+									(
+										quote! {mut},
+										quote! {
+											preprocessor.set_args(#args)?;
+										},
+									)
+								};
+								quote! {
+									let #resulting_name = {
+										let #mutable preprocessor = #preprocessor ::from(#from_name);
+										#args
+										preprocessor.preprocess()?
+									};
+								}
+							})
+							.collect::<TokenStream2>()
+					})
+					.collect::<TokenStream2>();
+
+				if paren.is_some() {
+					quote! {
+						#ident :: #variant_name (
+							#(#og_field_names),*
+						) => {
+							#field_processors
+							Ok(#processed_type_name :: #variant_name (
+								#(#populate_variables),*
+							))
+						}
+					}
+				} else {
+					quote! {
+						#ident :: #variant_name {
+							#(#og_field_names),*
+						} => {
+							#field_processors
+							Ok(#processed_type_name :: #variant_name {
+								#(#populate_variables),*
+							})
+						}
+					}
+				}
+			})
+			.collect::<TokenStream2>();
+
+		let new_type = field_args
+			.iter()
+			.map(|(variant, (_, paren, fields))| {
+				let variant_name = format_ident!("{}", variant);
+				let new_variant_fields = fields
+					.iter()
+					.map(|(vis, ident, _, ty, _, processors)| {
+						if processors.is_empty() {
+							if let Some(ident) = ident {
+								quote! {
+									#ident: #ty,
+								}
+							} else {
+								quote! {
+									#ty,
+								}
+							}
+						} else {
+							let last_preprocessor_name = processors
+								.last()
+								.unwrap()
+								.preprocessor_type
+								.clone();
+							if let Some(ident) = ident {
+								quote! {
+									#vis #ident: <#last_preprocessor_name as preprocess::PreProcessor>::Processed,
+								}
+							} else {
+								quote! {
+									#vis <#last_preprocessor_name as preprocess::PreProcessor>::Processed,
+								}
+							}
+						}
+					})
+					.collect::<TokenStream2>();
+				if paren.is_some() {
+					quote! {
+						#variant_name (
+							#new_variant_fields
+						)
+					}
+				} else {
+					quote! {
+						#variant_name {
+							#new_variant_fields
+						}
+					}
+				}
+			})
+			.collect::<TokenStream2>();
+		(
+			quote! {
+				match self {
+					#variant_processors
+				}
+			},
+			quote! {
+				#vis #processed_type #processed_type_name #ty_generics #where_clause {
+					#new_type
+				}
+			},
+		)
+	};
+
+	quote! {
+		impl #impl_generics preprocess::PreProcessor for #ident #ty_generics #where_clause {
+			type Args = ();
+			type Processed = #processed_type_name;
+
+			fn preprocess(self) -> Result<Self::Processed, preprocess::PreProcessError> {
+				#processor
+			}
+		}
+
+		#new_type_data
+	}
+	.into()
+}
+
+fn get_preprocessors_from_fields(
+	span: Span,
+	fields: Fields,
+) -> Result<(
+	Option<Brace>,
+	Option<Paren>,
+	Vec<(
+		Visibility,
+		Option<proc_macro2::Ident>,
+		Option<Colon>,
+		Type,
+		Vec<Attribute>,
+		Vec<PreProcessorAttribute>,
+	)>,
+)> {
+	match fields {
+		Fields::Named(named) => {
+			let fields = named
+				.named
+				.into_iter()
+				.enumerate()
+				.map(|(index, field)| {
+					Ok((
+						field.vis,
+						field.ident.clone(),
+						field.colon_token,
+						field.ty,
+						field.attrs.clone(),
+						parse_attributes(
+							field.attrs,
+							field
+								.ident
+								.map(|ident| ident.to_string())
+								.unwrap_or(index.to_string()),
+							false,
+						)?,
+					))
+				})
+				.collect::<Result<Vec<_>>>()?;
+			Ok((Some(named.brace_token), None, fields))
+		}
+		Fields::Unnamed(unnamed) => {
+			let fields = unnamed
+				.unnamed
+				.into_iter()
+				.enumerate()
+				.map(|(index, field)| {
+					Ok((
+						field.vis,
+						field.ident.clone(),
+						field.colon_token,
+						field.ty,
+						field.attrs.clone(),
+						parse_attributes(
+							field.attrs,
+							field
+								.ident
+								.map(|ident| ident.to_string())
+								.unwrap_or(index.to_string()),
+							false,
+						)?,
+					))
+				})
+				.collect::<Result<Vec<_>>>()?;
+			Ok((None, Some(unnamed.paren_token), fields))
+		}
+		Fields::Unit => {
+			return Err(Error::new(
+				span,
+				"unit structs are currently not supported",
+			));
+		}
+	}
 }
 
 fn parse_attributes(
@@ -114,7 +537,8 @@ fn parse_attributes(
 				// In case there's a #[preprocess] attribute, just create a
 				// preprocessor with the default arguments
 				Path(_) => vec![PreProcessorAttribute {
-					preprocessor_type: process_on_type.clone(),
+					preprocessor_type: format_ident!("{}", process_on_type)
+						.to_token_stream(),
 					output_type: None,
 					args: Map::new(),
 				}],
@@ -168,7 +592,6 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 					),
 				));
 			}
-			let name = name_value.path.get_ident().unwrap().to_string();
 			let value = if let Lit::Str(string) = name_value.lit {
 				Value::String(string.value())
 			} else {
@@ -181,7 +604,7 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 				));
 			};
 			PreProcessorAttribute {
-				preprocessor_type: name,
+				preprocessor_type: quote!(custom),
 				output_type: None,
 				args: {
 					let mut map = Map::new();
@@ -192,16 +615,18 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 		}
 		Path(path) => {
 			let name = path.get_ident().unwrap().to_string();
+			let (name, args) =
+				preprocess_preprocessor(path.span(), name, Default::default())?;
 			PreProcessorAttribute {
 				preprocessor_type: name,
 				output_type: None,
-				args: Default::default(),
+				args,
 			}
 		}
-		List(list) => PreProcessorAttribute {
-			preprocessor_type: list.path.get_ident().unwrap().to_string(),
-			output_type: None,
-			args: list
+		List(list) => {
+			let name = list.path.get_ident().unwrap().to_string();
+			let span = list.span();
+			let args = list
 				.nested
 				.into_iter()
 				.map(|item| {
@@ -274,7 +699,7 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 										span,
 										format!(
 											"unknown value `{}` for {}",
-											quote::quote!(#value),
+											quote!(#value),
 											"preprocessor arguments"
 										),
 									));
@@ -284,9 +709,125 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 						}
 					}
 				})
-				.collect::<Result<_>>()?,
-		},
+				.collect::<Result<_>>()?;
+			let (name, args) = preprocess_preprocessor(span, name, args)?;
+			PreProcessorAttribute {
+				preprocessor_type: name,
+				output_type: None,
+				args,
+			}
+		}
 	};
 
 	Ok(preprocessors)
+}
+
+fn attr_args_to_map(value: Value) -> TokenStream2 {
+	match value {
+		Value::Null => unreachable!(),
+		Value::Bool(value) => quote! {
+			serde_json::Value::Bool(#value)
+		},
+		Value::Number(number) => {
+			let number = if let Some(num) = number.as_u64() {
+				quote!(#num)
+			} else if let Some(num) = number.as_i64() {
+				quote!(#num)
+			} else if let Some(num) = number.as_f64() {
+				quote!(#num)
+			} else {
+				unreachable!()
+			};
+			quote! {
+				serde_json::Value::Number(#number.into())
+			}
+		}
+		Value::String(string) => quote! {
+			serde_json::Value::String(#string.to_string())
+		},
+		Value::Array(items) => {
+			let vector = items
+				.into_iter()
+				.filter_map(|item| {
+					if item.is_null() {
+						None
+					} else {
+						let item = attr_args_to_map(item);
+						Some(quote! {
+							#item,
+						})
+					}
+				})
+				.collect::<TokenStream2>();
+			quote! {
+				serde_json::Value::Array(vec![
+					#vector
+				])
+			}
+		}
+		Value::Object(map) => {
+			let map = map
+				.into_iter()
+				.filter_map(|(key, value)| {
+					if value.is_null() {
+						None
+					} else {
+						let value = attr_args_to_map(value);
+						Some(quote! {
+							map.insert(#key.to_string(), #value);
+						})
+					}
+				})
+				.collect::<TokenStream2>();
+			quote! {
+				serde_json::Value::Object({
+					let mut map = serde_json::Map::new();
+					#map
+					map
+				})
+			}
+		}
+	}
+}
+
+fn preprocess_preprocessor(
+	span: Span,
+	name: String,
+	args: Map<String, Value>,
+) -> Result<(TokenStream2, Map<String, Value>)> {
+	let result = match name.as_str() {
+		"email" => (
+			quote!(preprocess::validators::EmailValidator),
+			if args.is_empty() {
+				args
+			} else {
+				return Err(Error::new(
+					span,
+					"email preprocessor takes no arguments",
+				));
+			},
+		),
+		"length" => (quote!(preprocess::validators::LengthValidator), {
+			let args = serde_json::from_value::<LengthValidatorArgs>(
+				Value::Object(args),
+			)
+			.map_err(|e| {
+				Error::new(
+					span,
+					format!(
+						"Unable to parse length preprocessor arguments: {}",
+						e
+					),
+				)
+			})?;
+			if let Value::Object(map) = serde_json::to_value(args).unwrap() {
+				map
+			} else {
+				unreachable!()
+			}
+		}),
+		_ => (format_ident!("{}", name).to_token_stream(), args),
+	};
+
+	Ok(result)
 }

@@ -91,6 +91,7 @@ dependencies = [
  "idna",
  "indexmap",
  "lazy_static",
+ "preprocess_types",
  "regex",
  "serde",
  "serde_json",
@@ -101,6 +102,8 @@ dependencies = [
 name = "preprocess_derive"
 version = "0.1.0"
 dependencies = [
+ "preprocess_types",
+ "proc-macro2",
  "quote",
  "serde_json",
  "syn",
@@ -116,6 +119,19 @@ dependencies = [
  "serde",
  "serde_json",
  "syn",
+]
+
+[[package]]
+name = "preprocess_types"
+version = "0.1.0"
+dependencies = [
+ "idna",
+ "indexmap",
+ "lazy_static",
+ "regex",
+ "serde",
+ "serde_json",
+ "url",
 ]
 
 [[package]]

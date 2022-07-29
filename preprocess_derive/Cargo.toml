@@ -7,6 +7,8 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
+preprocess_types = { path = "../preprocess_types" }
+proc-macro2 = "1"
 quote = "1"
 serde_json = "1"
 syn = { version = "1", features = ["extra-traits"] }
