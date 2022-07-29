@@ -11,7 +11,9 @@ pub trait PreProcessor {
 	fn preprocess(self) -> Result<Self::Processed, PreProcessError>;
 
 	#[allow(unused_variables)]
-	fn set_args(&mut self, args: Self::Args) {}
+	fn set_args(&mut self, args: serde_json::Value) -> Result<(), PreProcessError> {
+		Ok(())
+	}
 	fn get_args(&self) -> Self::Args {
 		Default::default()
 	}
