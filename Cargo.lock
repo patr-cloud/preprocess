@@ -91,6 +91,7 @@ dependencies = [
  "idna",
  "indexmap",
  "lazy_static",
+ "preprocess_derive",
  "preprocess_types",
  "regex",
  "serde",
