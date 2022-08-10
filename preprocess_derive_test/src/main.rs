@@ -1,31 +1,26 @@
-use preprocess::{validators::EmailValidator, PreProcessor};
-use preprocess_derive::Preprocess;
-use serde::{Deserialize, Serialize};
+use preprocess::PreProcess;
 
-#[derive(Preprocess)]
+#[derive(PreProcess)]
 pub struct SignUpRequest {
 	#[preprocess(email)]
 	username: String,
 	#[preprocess(length(min = 4, max = 64), email)]
 	password: String,
 	user_id: String,
+	#[preprocess]
+	test: Test,
 }
 
-#[derive(Preprocess)]
+#[derive(PreProcess)]
 pub struct SignInRequest {
 	user_id: String,
 	#[preprocess(length(min = 4, max = 64), email)]
 	password: String,
 }
 
-#[allow(dead_code)]
-pub struct Processed {
-	username: <EmailValidator as PreProcessor>::Processed,
-}
-
 pub struct Unnamed(String, usize, f64);
 
-#[derive(Preprocess)]
+#[derive(PreProcess)]
 pub enum Test {
 	VariantA {
 		#[preprocess(email)]
@@ -33,7 +28,7 @@ pub enum Test {
 		field2: String,
 	},
 	VariantB {
-		#[preprocess(length(min = 4, max = 64), email)]
+		#[preprocess(email, length(min = 4, max = 64))]
 		field3: String,
 		field4: String,
 	},

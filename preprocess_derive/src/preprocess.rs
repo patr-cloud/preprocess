@@ -436,20 +436,19 @@ fn get_preprocessors_from_fields(
 			let fields = named
 				.named
 				.into_iter()
-				.enumerate()
-				.map(|(index, field)| {
+				.map(|field| {
 					Ok((
 						field.vis,
 						field.ident.clone(),
 						field.colon_token,
-						field.ty,
+						field.ty.clone(),
 						field.attrs.clone(),
 						parse_attributes(
 							field.attrs,
-							field
-								.ident
-								.map(|ident| ident.to_string())
-								.unwrap_or(index.to_string()),
+							{
+								let ty = field.ty;
+								quote!(#ty).to_string()
+							},
 							false,
 						)?,
 					))
@@ -461,20 +460,19 @@ fn get_preprocessors_from_fields(
 			let fields = unnamed
 				.unnamed
 				.into_iter()
-				.enumerate()
-				.map(|(index, field)| {
+				.map(|field| {
 					Ok((
 						field.vis,
 						field.ident.clone(),
 						field.colon_token,
-						field.ty,
+						field.ty.clone(),
 						field.attrs.clone(),
 						parse_attributes(
 							field.attrs,
-							field
-								.ident
-								.map(|ident| ident.to_string())
-								.unwrap_or(index.to_string()),
+							{
+								let ty = field.ty;
+								quote!(#ty).to_string()
+							},
 							false,
 						)?,
 					))
@@ -551,7 +549,7 @@ fn parse_attributes(
 							// For each preprocessor, parse it as an attribute
 							match item {
 								NestedMeta::Meta(meta) => {
-									parse_preprocessor(meta)
+									parse_preprocessor(meta, &process_on_type)
 								}
 								NestedMeta::Lit(_) => Err(Error::new(
 									item.span(),
@@ -578,7 +576,10 @@ fn parse_attributes(
 		.map(|vec_of_vecs| vec_of_vecs.into_iter().flatten().collect())
 }
 
-fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
+fn parse_preprocessor(
+	meta: Meta,
+	type_name: &str,
+) -> Result<PreProcessorAttribute> {
 	let span = meta.span();
 	let preprocessors = match meta {
 		NameValue(name_value) => {
@@ -615,8 +616,12 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 		}
 		Path(path) => {
 			let name = path.get_ident().unwrap().to_string();
-			let (name, args) =
-				preprocess_preprocessor(path.span(), name, Default::default())?;
+			let (name, args) = preprocess_preprocessor(
+				path.span(),
+				name,
+				type_name,
+				Default::default(),
+			)?;
 			PreProcessorAttribute {
 				preprocessor_type: name,
 				output_type: None,
@@ -710,7 +715,8 @@ fn parse_preprocessor(meta: Meta) -> Result<PreProcessorAttribute> {
 					}
 				})
 				.collect::<Result<_>>()?;
-			let (name, args) = preprocess_preprocessor(span, name, args)?;
+			let (name, args) =
+				preprocess_preprocessor(span, name, type_name, args)?;
 			PreProcessorAttribute {
 				preprocessor_type: name,
 				output_type: None,
@@ -793,11 +799,14 @@ fn attr_args_to_map(value: Value) -> TokenStream2 {
 fn preprocess_preprocessor(
 	span: Span,
 	name: String,
+	type_name: &str,
 	args: Map<String, Value>,
 ) -> Result<(TokenStream2, Map<String, Value>)> {
 	let result = match name.as_str() {
 		"email" => (
-			quote!(preprocess::validators::EmailValidator),
+			quote!{
+				preprocess::validators::EmailValidator
+			},
 			if args.is_empty() {
 				args
 			} else {
@@ -807,25 +816,34 @@ fn preprocess_preprocessor(
 				));
 			},
 		),
-		"length" => (quote!(preprocess::validators::LengthValidator), {
-			let args = serde_json::from_value::<LengthValidatorArgs>(
-				Value::Object(args),
-			)
-			.map_err(|e| {
-				Error::new(
-					span,
-					format!(
-						"Unable to parse length preprocessor arguments: {}",
-						e
-					),
+		"length" => (
+			{
+				let ident = format_ident!("{}", type_name);
+				quote! {
+					preprocess::validators::LengthValidator::<#ident>
+				}
+			},
+			{
+				let args = serde_json::from_value::<LengthValidatorArgs>(
+					Value::Object(args),
 				)
-			})?;
-			if let Value::Object(map) = serde_json::to_value(args).unwrap() {
-				map
-			} else {
-				unreachable!()
-			}
-		}),
+				.map_err(|e| {
+					Error::new(
+						span,
+						format!(
+							"Unable to parse length preprocessor arguments: {}",
+							e
+						),
+					)
+				})?;
+				if let Value::Object(map) = serde_json::to_value(args).unwrap()
+				{
+					map
+				} else {
+					unreachable!()
+				}
+			},
+		),
 		_ => (format_ident!("{}", name).to_token_stream(), args),
 	};
 
