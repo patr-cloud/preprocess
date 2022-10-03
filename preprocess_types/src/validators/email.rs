@@ -78,81 +78,14 @@ fn validate_domain_part(domain_part: &str) -> bool {
 /// }
 /// ```
 #[must_use]
-#[derive(Debug, Clone)]
-pub struct EmailValidator {
-	data: String,
+pub trait EmailValidator: Display + Sized {
+	fn validate_email(self) -> Result<Self, PreProcessError>;
 }
 
-impl EmailValidator {
-	/// Validates whether the given string is a valid email or not.
-	///
-	/// ```rust
-	/// use preprocess::validators::EmailValidator;
-	///
-	/// pub fn main() {
-	/// 	let email: &str = "hello@example.com";
-	/// 	assert!(EmailValidator::from(email).validate());
-	/// }
-	pub fn validate(&self) -> bool {
-		validate_email(&self.data)
-	}
-}
-
-impl<Displaylike: Display> From<Displaylike> for EmailValidator {
-	/// Creates a new [`EmailValidator`] from any struct that implements the
-	/// [`Display`] trait.
-	///
-	/// ```rust
-	/// use preprocess::validators::EmailValidator;
-	///
-	/// pub fn main() {
-	/// 	let validator = EmailValidator::from("hello@example.com");
-	/// 	assert_eq!(validator.validate(), true);
-	/// }
-	/// ```
-	fn from(data: Displaylike) -> Self {
-		EmailValidator {
-			data: data.to_string(),
-		}
-	}
-}
-
-impl PreProcessor for EmailValidator {
-	/// Does not require any arguments
-	type Args = ();
-	/// Returns a [`String`] if the email is valid or an error if it is not.
-	///
-	/// ```rust
-	/// use preprocess::{validators::EmailValidator, PreProcessor};
-	///
-	/// pub fn main() {
-	/// 	let validated_email: String = EmailValidator::from("hello@example.com")
-	/// 		.preprocess()
-	/// 		.unwrap();
-	/// 	assert_eq!(validated_email, "hello@example.com".to_string());
-	/// }
-	/// ```
-	type Processed = String;
-
-	/// Validates whether the given string is a valid email or not, returning an
-	/// error if it is not, or a [`String`] with the validated email if it is.
-	///
-	/// ```rust
-	/// use preprocess::{
-	/// 	validators::EmailValidator,
-	/// 	PreProcessError,
-	/// 	PreProcessor,
-	/// };
-	///
-	/// pub fn main() {
-	/// 	let validated_email: Result<String, PreProcessError> =
-	/// 		EmailValidator::from("hello@example.com").preprocess();
-	/// 	assert_eq!(validated_email, Ok("hello@example.com".to_string()));
-	/// }
-	/// ```
-	fn preprocess(self) -> Result<String, PreProcessError> {
-		if self.validate() {
-			Ok(self.data)
+impl<Displaylike: Display> EmailValidator for Displaylike {
+	fn validate_email(self) -> Result<Self, PreProcessError> {
+		if validate_email(&self.to_string()) {
+			Ok(self)
 		} else {
 			Err(PreProcessError {})
 		}
