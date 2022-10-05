@@ -1,4 +1,5 @@
-use quote::ToTokens;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 use syn::{
 	spanned::Spanned,
 	Attribute,
@@ -49,6 +50,7 @@ impl TryFrom<Field> for NamedFieldProcessor {
 		let preprocessors = attrs
 			.iter()
 			.cloned()
+			.filter(|attr| attr.path.is_ident("preprocess"))
 			.map::<Result<_>, _>(|attr| {
 				Preprocessor::from_attr(
 					ident.to_string(),
@@ -68,5 +70,18 @@ impl TryFrom<Field> for NamedFieldProcessor {
 			ty,
 			preprocessors,
 		})
+	}
+}
+
+impl NamedFieldProcessor {
+	pub fn get_processor_tokens(&self) -> TokenStream {
+		let processors = self
+			.preprocessors
+			.iter()
+			.map(|processor| processor.get_processor_token(&self.name));
+
+		quote! {
+			#(#processors) *
+		}
 	}
 }

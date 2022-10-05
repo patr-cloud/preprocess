@@ -4,7 +4,7 @@ use idna::domain_to_ascii;
 use regex::Regex;
 
 use super::ip::validate_ip;
-use crate::{PreProcessError, PreProcessor};
+use crate::PreProcessError;
 
 lazy_static::lazy_static! {
 	static ref EMAIL_USER_RE: Regex = Regex::new(r"^(?i)[a-z0-9.!#$%&'*+/=?^_`{|}~-]+\z").unwrap();

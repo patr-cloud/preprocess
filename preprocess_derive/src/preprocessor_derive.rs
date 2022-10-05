@@ -30,6 +30,7 @@ pub enum PreprocessorDerive {
 		preprocessors: Vec<Preprocessor>,
 		fields: FieldValues,
 	},
+	#[allow(dead_code)]
 	Enum {
 		attrs: Vec<Attribute>,
 		vis: Visibility,
@@ -40,6 +41,7 @@ pub enum PreprocessorDerive {
 	},
 }
 
+#[allow(dead_code, unused_variables)]
 impl PreprocessorDerive {
 	pub fn preprocess_tokens(self) -> TokenStream2 {
 		match self {
@@ -54,14 +56,54 @@ impl PreprocessorDerive {
 				let (impl_generics, ty_generics, where_clause) =
 					generics.split_for_impl();
 				let processed_type_name = format_ident!("{}Processed", name);
-				let end = if let FieldValues::NoFields = &fields {
-					quote! { ; }
-				} else {
-					quote! { }
+				let field_definitions = fields.get_field_definitions();
+				let field_definitions = match &fields {
+					FieldValues::NoFields => quote! {;},
+					FieldValues::Named(_) => {
+						quote! { { #field_definitions } }
+					}
+					FieldValues::Unnamed(_) => {
+						quote! { ( #field_definitions ) }
+					}
 				};
+				let fields_comma_separated =
+					fields.get_fields_comma_separated();
+				let descructure = match &fields {
+					FieldValues::NoFields => quote! {},
+					FieldValues::Named(_) => {
+						quote! { { #fields_comma_separated } }
+					}
+					FieldValues::Unnamed(_) => {
+						quote! { ( #fields_comma_separated ) }
+					}
+				};
+
+				let field_processors = match &fields {
+					FieldValues::NoFields => vec![quote! {}],
+					FieldValues::Named(fields) => fields
+						.iter()
+						.map(|field| field.get_processor_tokens())
+						.collect::<Vec<_>>(),
+					FieldValues::Unnamed(fields) => fields
+						.iter()
+						.enumerate()
+						.map(|(index, field)| field.get_processor_tokens(index))
+						.collect::<Vec<_>>(),
+				};
+
 				quote! {
 					#vis struct #processed_type_name #ty_generics #where_clause
-					#end
+					#field_definitions
+
+					impl preprocess::PreProcessor for #name {
+						fn preprocess(self) -> Result<#processed_type_name, preprocess::PreProcessError> {
+							let #name #descructure = self;
+
+							#(#field_processors) *
+
+							Ok(#processed_type_name #descructure)
+						}
+					}
 				}
 			}
 			PreprocessorDerive::Enum {
@@ -91,6 +133,7 @@ impl TryFrom<TokenStream> for PreprocessorDerive {
 		let preprocessors = attrs
 			.iter()
 			.cloned()
+			.filter(|attr| attr.path.is_ident("preprocess"))
 			.map::<Result<_>, _>(|attr| {
 				Preprocessor::from_attr("".to_string(), ident.to_string(), attr)
 			})
@@ -98,9 +141,8 @@ impl TryFrom<TokenStream> for PreprocessorDerive {
 			.into_iter()
 			.flatten()
 			.map(|preprocessor| match &preprocessor.r#type {
-				PreprocessorType::Custom { function_name: _ } => {
-					Ok(preprocessor)
-				}
+				PreprocessorType::Custom { .. } |
+				PreprocessorType::TypeSpecifier { .. } => Ok(preprocessor),
 				_ => Err(Error::new(
 					preprocessor.resultant_type.span(),
 					format!(
@@ -140,6 +182,7 @@ impl TryFrom<TokenStream> for PreprocessorDerive {
 					fields: FieldValues::NoFields,
 				}),
 			},
+			#[allow(dead_code, unused_variables)]
 			Data::Enum(enum_data) => todo!(),
 			Data::Union(union_data) => {
 				return Err(Error::new(

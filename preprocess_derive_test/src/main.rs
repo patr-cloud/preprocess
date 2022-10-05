@@ -1,20 +1,20 @@
 use preprocess::PreProcess;
-
+use serde::Serialize;
 
 #[derive(PreProcess)]
 #[preprocess(custom = "test")]
 pub struct UnitStruct;
 
-// #[derive(PreProcess)]
-// pub struct SignUpRequest {
-// 	#[preprocess(email)]
-// 	username: String,
-// 	#[preprocess(length(min = 4, max = 64), email)]
-// 	password: String,
-// 	user_id: String,
-// 	#[preprocess]
-// 	test: Test,
-// }
+#[derive(PreProcess, Serialize)]
+pub struct SignUpRequest {
+	#[preprocess(email)]
+	pub username: String,
+	#[preprocess(length(min = 4, max = 64), email)]
+	pub password: String,
+	pub user_id: String,
+	// #[preprocess]
+	// test: Test,
+}
 
 // #[derive(PreProcess)]
 // pub struct SignInRequest {

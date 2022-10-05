@@ -268,7 +268,8 @@ impl<H: HasLength> PreProcessor for LengthValidator<H> {
 	}
 
 	fn set_args(&mut self, args: Value) -> Result<(), PreProcessError> {
-		self.args = serde_json::from_value(args).map_err(|_| PreProcessError {})?;
+		self.args =
+			serde_json::from_value(args).map_err(|_| PreProcessError {})?;
 		Ok(())
 	}
 }
