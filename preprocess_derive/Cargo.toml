@@ -10,5 +10,6 @@ proc-macro = true
 preprocess_types = { path = "../preprocess_types" }
 proc-macro2 = "1"
 quote = "1"
+regex = "1.6.0"
 serde_json = "1"
 syn = { version = "1", features = ["extra-traits"] }

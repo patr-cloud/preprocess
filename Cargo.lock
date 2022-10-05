@@ -106,6 +106,7 @@ dependencies = [
  "preprocess_types",
  "proc-macro2",
  "quote",
+ "regex",
  "serde_json",
  "syn",
 ]
