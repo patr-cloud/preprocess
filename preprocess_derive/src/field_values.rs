@@ -3,11 +3,10 @@ use quote::{format_ident, quote, ToTokens};
 
 use super::{NamedFieldProcessor, UnnamedFieldProcessor};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FieldValues {
 	NoFields,
 	Named(Vec<NamedFieldProcessor>),
-	#[allow(dead_code)]
 	Unnamed(Vec<UnnamedFieldProcessor>),
 }
 
