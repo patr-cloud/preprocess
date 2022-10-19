@@ -13,7 +13,7 @@ use syn::{
 
 use super::Preprocessor;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NamedFieldProcessor {
 	pub attrs: Vec<Attribute>,
 	pub vis: Visibility,

@@ -15,7 +15,7 @@ use syn::{
 	Result,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Preprocessor {
 	pub r#type: PreprocessorType,
 	pub log_value: bool,
@@ -661,7 +661,7 @@ impl Preprocessor {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PreprocessorType {
 	Custom { function_name: String },
 	TypeSpecifier { type_name: String },

@@ -18,9 +18,10 @@ use super::{EnumVariant, FieldValues, Preprocessor};
 use crate::{
 	named_field_processor::NamedFieldProcessor,
 	preprocessor::PreprocessorType,
+	unnamed_field_processor::UnnamedFieldProcessor,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PreprocessorDerive {
 	Struct {
 		attrs: Vec<Attribute>,
@@ -30,7 +31,6 @@ pub enum PreprocessorDerive {
 		preprocessors: Vec<Preprocessor>,
 		fields: FieldValues,
 	},
-	#[allow(dead_code)]
 	Enum {
 		attrs: Vec<Attribute>,
 		vis: Visibility,
@@ -41,12 +41,11 @@ pub enum PreprocessorDerive {
 	},
 }
 
-#[allow(dead_code, unused_variables)]
 impl PreprocessorDerive {
 	pub fn preprocess_tokens(self) -> TokenStream2 {
 		match self {
 			PreprocessorDerive::Struct {
-				attrs,
+				attrs: _,
 				vis,
 				name,
 				generics,
@@ -68,7 +67,7 @@ impl PreprocessorDerive {
 				};
 				let fields_comma_separated =
 					fields.get_fields_comma_separated();
-				let descructure = match &fields {
+				let fields_comma_separated = match &fields {
 					FieldValues::NoFields => quote! {},
 					FieldValues::Named(_) => {
 						quote! { { #fields_comma_separated } }
@@ -91,29 +90,130 @@ impl PreprocessorDerive {
 						.collect::<Vec<_>>(),
 				};
 
+				let global_preprocessors =
+					preprocessors.into_iter().map(|preprocessor| {
+						preprocessor.get_processor_token(&format_ident!(
+							"parent_struct"
+						))
+					});
+
 				quote! {
 					#vis struct #processed_type_name #ty_generics #where_clause
 					#field_definitions
 
-					impl preprocess::PreProcessor for #name {
+					impl #impl_generics preprocess::PreProcessor for #name #ty_generics #where_clause {
 						fn preprocess(self) -> Result<#processed_type_name, preprocess::PreProcessError> {
-							let #name #descructure = self;
+							let parent_struct = self;
+
+							#(#global_preprocessors) *
+
+							let #name #fields_comma_separated = parent_struct;
 
 							#(#field_processors) *
 
-							Ok(#processed_type_name #descructure)
+							Ok(#processed_type_name #fields_comma_separated)
 						}
 					}
 				}
 			}
 			PreprocessorDerive::Enum {
-				attrs,
+				attrs: _,
 				vis,
 				name,
 				generics,
 				preprocessors,
 				variants,
-			} => todo!(),
+			} => {
+				let (impl_generics, ty_generics, where_clause) =
+					generics.split_for_impl();
+				let processed_type_name = format_ident!("{}Processed", name);
+
+				let variant_definitions =
+					variants.clone().into_iter().map(|variant| {
+						variant.get_definition(&processed_type_name)
+					});
+
+				let global_preprocessors =
+					preprocessors.into_iter().map(|preprocessor| {
+						preprocessor.get_processor_token(&format_ident!(
+							"parent_struct"
+						))
+					});
+
+				let variant_processors = variants.into_iter().map(
+					|EnumVariant {
+					     name,
+					     preprocessors,
+					     fields,
+					 }| {
+						let fields_comma_separated =
+							fields.get_fields_comma_separated();
+						let fields_comma_separated = match &fields {
+							FieldValues::NoFields => quote! {},
+							FieldValues::Named(_) => {
+								quote! { { #fields_comma_separated } }
+							}
+							FieldValues::Unnamed(_) => {
+								quote! { ( #fields_comma_separated ) }
+							}
+						};
+
+						let variant_processors =
+							preprocessors.into_iter().map(|preprocessor| {
+								preprocessor.get_processor_token(
+									&format_ident!("current_variant"),
+								)
+							});
+
+						let field_processors = match &fields {
+							FieldValues::NoFields => vec![quote! {}],
+							FieldValues::Named(fields) => fields
+								.iter()
+								.map(|field| field.get_processor_tokens())
+								.collect::<Vec<_>>(),
+							FieldValues::Unnamed(fields) => fields
+								.iter()
+								.enumerate()
+								.map(|(index, field)| {
+									field.get_processor_tokens(index)
+								})
+								.collect::<Vec<_>>(),
+						};
+
+						quote! {
+							Self::#name #fields_comma_separated => {
+								let current_variant = Self:: #ty_generics ::#name #fields_comma_separated ;
+
+								#(#variant_processors) *
+
+								let Self:: #ty_generics ::#name #fields_comma_separated = current_variant;
+
+								#(#field_processors) *
+
+								Ok(#processed_type_name :: #ty_generics :: #name #fields_comma_separated)
+							}
+						}
+					},
+				);
+
+				quote! {
+					#vis enum #processed_type_name #ty_generics #where_clause {
+						#(#variant_definitions,) *
+					}
+
+					impl #impl_generics preprocess::PreProcessor for #name #ty_generics #where_clause {
+						fn preprocess(self) -> Result<#processed_type_name, preprocess::PreProcessError> {
+							let parent_struct = self;
+
+							#(#global_preprocessors) *
+
+							match parent_struct {
+								#(#variant_processors) *
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 }
@@ -172,7 +272,23 @@ impl TryFrom<TokenStream> for PreprocessorDerive {
 							.collect::<Result<Vec<_>>>()?,
 					),
 				}),
-				Fields::Unnamed(_) => todo!(),
+				Fields::Unnamed(unnamed) => Ok(Self::Struct {
+					attrs,
+					vis,
+					name: ident,
+					generics,
+					preprocessors,
+					fields: FieldValues::Unnamed(
+						unnamed
+							.unnamed
+							.into_iter()
+							.enumerate()
+							.map(|(index, field)| {
+								UnnamedFieldProcessor::try_from((field, index))
+							})
+							.collect::<Result<Vec<_>>>()?,
+					),
+				}),
 				Fields::Unit => Ok(Self::Struct {
 					attrs,
 					vis,
@@ -182,8 +298,21 @@ impl TryFrom<TokenStream> for PreprocessorDerive {
 					fields: FieldValues::NoFields,
 				}),
 			},
-			#[allow(dead_code, unused_variables)]
-			Data::Enum(enum_data) => todo!(),
+			Data::Enum(enum_data) => {
+				let variants = enum_data
+					.variants
+					.into_iter()
+					.map(|variant| EnumVariant::try_from(variant))
+					.collect::<Result<Vec<_>>>()?;
+				Ok(Self::Enum {
+					attrs,
+					vis,
+					name: ident,
+					generics,
+					preprocessors,
+					variants,
+				})
+			}
 			Data::Union(union_data) => {
 				return Err(Error::new(
 					union_data.union_token.span(),
