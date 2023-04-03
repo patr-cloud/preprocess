@@ -2,18 +2,13 @@
 name = "preprocess"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
-description = "Preprocesses a struct with built-in preprocessors"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
-preprocess_types = { path = "../preprocess_types" }
-preprocess_derive = { path = "../preprocess_derive" }
-idna = "0.2"
-indexmap = "1.9.1"
-lazy_static = "1"
-regex = "1"
+preprocess_derive = { version = "0.1.0", path = "../preprocess_derive" }
+
+once_cell = "1"
+regex = { version = "1" }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-url = "2"
