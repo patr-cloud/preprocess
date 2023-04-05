@@ -4,7 +4,7 @@ pub trait Length {
 	fn length(&self) -> usize;
 }
 
-pub fn valid_length(
+pub fn length(
 	val: &impl Length,
 	min: Option<usize>,
 	max: Option<usize>,

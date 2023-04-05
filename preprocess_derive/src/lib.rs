@@ -138,7 +138,7 @@ fn impl_for_field(ident: &Ident, attrs: Vec<Attribute>) -> Result<TokenStream> {
 		.filter(|attr| attr.path().is_ident("preprocess"))
 		.map(|attr| match attr.meta {
 			syn::Meta::Path(_path) => Ok(quote!(
-				#ident.preprocess()?;
+				::preprocess::PreProcess::preprocess(&mut *#ident)?;
 			)),
 			syn::Meta::List(list) => Ok(
 				Punctuated::<AllowedOps, Token![,]>::parse_separated_nonempty
@@ -161,7 +161,7 @@ fn impl_for_field(ident: &Ident, attrs: Vec<Attribute>) -> Result<TokenStream> {
 enum AllowedOps {
 	Trim,
 	Lowercase,
-	ValidLength {
+	Length {
 		min: Option<usize>,
 		max: Option<usize>,
 	},
@@ -179,7 +179,7 @@ impl AllowedOps {
 			Self::Lowercase => quote!(
 				::preprocess::process::lowercase(&mut *#ident)?;
 			),
-			Self::ValidLength { min, max } => {
+			Self::Length { min, max } => {
 				let min = min.map_or_else(
 					|| quote!(::std::option::Option::None),
 					|min| quote!(::std::option::Option::Some(#min)),
@@ -190,7 +190,7 @@ impl AllowedOps {
 				);
 
 				quote!(
-					::preprocess::process::valid_length(& *#ident, #min, #max)?;
+					::preprocess::process::length(& *#ident, #min, #max)?;
 				)
 			}
 			Self::Regex(pattern) => {
@@ -218,7 +218,7 @@ impl Parse for AllowedOps {
 		match ident.to_string().as_str() {
 			"trim" => Ok(Self::Trim),
 			"lowercase" => Ok(Self::Lowercase),
-			"valid_length" => {
+			"length" => {
 				let inner_content;
 				parenthesized!(inner_content in input);
 
@@ -270,7 +270,7 @@ impl Parse for AllowedOps {
 					));
 				}
 
-				Ok(Self::ValidLength { min, max })
+				Ok(Self::Length { min, max })
 			}
 			"regex" => {
 				input.parse::<Token![=]>()?;

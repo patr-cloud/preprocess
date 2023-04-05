@@ -17,7 +17,7 @@ fn derive_test() -> Result<(), Box<dyn std::error::Error>> {
 	struct Test {
 		#[preprocess(lowercase, process_mut(append_zero_mod::append_zero))]
 		name: String,
-		#[preprocess(trim, valid_length(max = 5))]
+		#[preprocess(trim, length(max = 5))]
 		value: String,
 	}
 

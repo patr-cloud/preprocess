@@ -1,11 +1,10 @@
+mod length;
+mod regex_pattern;
+
+pub use length::length;
+pub use regex_pattern::regex;
+
 use crate::PreProcessError;
-
-mod regex;
-mod valid_length;
-
-pub use valid_length::valid_length;
-
-pub use crate::process::regex::regex;
 
 pub fn trim(val: &mut String) -> Result<(), PreProcessError> {
 	let trimmed_val = val.trim();

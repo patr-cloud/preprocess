@@ -1,7 +1,7 @@
 # PreProcess
 
 ## Available processors:
-- valid_length => min and max supported
+- length => min and max supported
 - regex
 - trim
 - lowercase
