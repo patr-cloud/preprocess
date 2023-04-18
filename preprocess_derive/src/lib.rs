@@ -6,27 +6,14 @@ use syn::{
 	parse_macro_input,
 	punctuated::Punctuated,
 	spanned::Spanned,
-	Attribute,
-	Data,
-	DataEnum,
-	DataStruct,
-	DeriveInput,
-	Error,
-	Expr,
-	ExprLit,
-	ExprPath,
-	Fields,
-	FieldsNamed,
-	FieldsUnnamed,
-	Lit,
-	LitStr,
-	MetaNameValue,
+	Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Expr, ExprLit,
+	ExprPath, Fields, FieldsNamed, FieldsUnnamed, Lit, LitStr, MetaNameValue,
 	Token,
 };
 
 type Result<T> = syn::Result<T>;
 
-#[proc_macro_derive(PreProcess, attributes(preprocess))]
+#[proc_macro_derive(PreProcess, attributes(preprocess, preprocess_item))]
 pub fn derive_preprocess(
 	input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -135,27 +122,47 @@ fn impl_for_fields(field: Fields) -> Result<(TokenStream, TokenStream)> {
 fn impl_for_field(ident: &Ident, attrs: Vec<Attribute>) -> Result<TokenStream> {
 	attrs
 		.into_iter()
-		.filter(|attr| attr.path().is_ident("preprocess"))
-		.map(|attr| match attr.meta {
-			syn::Meta::Path(_path) => Ok(quote!(
-				::preprocess::PreProcess::preprocess(&mut *#ident)?;
-			)),
-			syn::Meta::List(list) => Ok(
-				Punctuated::<AllowedOps, Token![,]>::parse_separated_nonempty
-					.parse2(list.tokens)?
-					.into_iter()
-					.map(|ops| ops.to_tokens(ident))
-					.collect(),
-			),
-			syn::Meta::NameValue(name_value) => Err(Error::new(
-				name_value.span(),
-				"Attribute format not supported",
-			)),
+		.filter_map(|attr| {
+			if attr.path().is_ident("preprocess") {
+				Some(impl_for_attr(ident, attr))
+			} else if attr.path().is_ident("preprocess_item") {
+				let loop_variable =
+					Ident::new("item", proc_macro2::Span::call_site());
+				let attr_impls = impl_for_attr(&loop_variable, attr).map(|attr| {
+					quote!(
+						for #loop_variable in #ident {
+							#attr
+						}
+					)
+				});
+				Some(attr_impls)
+			} else {
+				None
+			}
 		})
 		.try_fold(TokenStream::new(), |mut accu, item| {
 			accu.extend(item?);
 			Ok(accu)
 		})
+}
+
+fn impl_for_attr(ident: &Ident, attr: Attribute) -> Result<TokenStream> {
+	match attr.meta {
+		syn::Meta::Path(_path) => Ok(quote!(
+			::preprocess::PreProcess::preprocess(&mut *#ident)?;
+		)),
+		syn::Meta::List(list) => Ok(
+			Punctuated::<AllowedOps, Token![,]>::parse_separated_nonempty
+				.parse2(list.tokens)?
+				.into_iter()
+				.map(|ops| ops.to_tokens(ident))
+				.collect(),
+		),
+		syn::Meta::NameValue(name_value) => Err(Error::new(
+			name_value.span(),
+			"Attribute format not supported",
+		)),
+	}
 }
 
 enum AllowedOps {

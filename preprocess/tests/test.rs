@@ -64,5 +64,21 @@ fn derive_test() -> Result<(), Box<dyn std::error::Error>> {
 		Testing::B("Hello".into(), "HEllo  ".into())
 	);
 
+	#[derive(Debug, PartialEq, PreProcess)]
+	struct T(
+		#[preprocess(length(min = 2))]
+		#[preprocess_item(trim, length(min = 3, max = 5))]
+		Vec<String>,
+	);
+
+	assert_eq!(
+		{
+			let mut t = T(vec![" Hello".into(), "HEllo  ".into(),  "HEllo  ".into()]);
+			t.preprocess().unwrap();
+			t
+		},
+		T(vec!["Hello".into(), "HEllo".into(), "HEllo".into()])
+	);
+
 	Ok(())
 }
