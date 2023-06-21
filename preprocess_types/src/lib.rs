@@ -3,6 +3,7 @@
 mod error;
 mod preprocess;
 
+pub mod preprocessors;
 pub mod validators;
 
 pub use error::PreProcessError;
