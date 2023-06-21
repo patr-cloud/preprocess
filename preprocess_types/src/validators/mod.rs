@@ -13,7 +13,7 @@ mod length;
 mod url;
 
 pub use self::{
-	email::{validate_email, EmailValidator},
+	email::{validate_domain_part, validate_email},
 	ip::{validate_ip, IpAddrValidator},
 	ipv4::{validate_ip_v4, Ipv4AddrValidator},
 	ipv6::{validate_ip_v6, Ipv6AddrValidator},

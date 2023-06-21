@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 quote = "1"
 serde_json = "1"
-syn = { version = "1" }
+syn = { version = "2" }
 preprocess_derive = { path = "../preprocess_derive" }
 serde = { version = "*", features = ["derive"] }
 preprocess = { path = "../preprocess" }
