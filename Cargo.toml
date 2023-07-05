@@ -1,7 +1,9 @@
 [workspace]
+package.version = "0.1.0"
 members = [
     "preprocess",
-    "preprocess_derive",
-    "preprocess_derive_test",
-    "preprocess_types",
+    "preprocess-macro",
+    "preprocess-test",
 ]
+
+
