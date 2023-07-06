@@ -1,6 +1,10 @@
 use proc_macro::TokenStream;
 use syn::{parse::Parse, ItemEnum, ItemStruct, __private::ToTokens};
 
+mod process_enum;
+mod process_struct;
+mod preprocessor;
+
 enum Item {
 	Struct(ItemStruct),
 	Enum(ItemEnum),
@@ -27,8 +31,8 @@ impl Into<TokenStream> for Item {
 impl Item {
 	fn into_processed(self) -> TokenStream {
 		match self {
-			Item::Struct(item) => into_processed_struct(item),
-			Item::Enum(item) => into_processed_enum(item),
+			Item::Struct(item) => process_struct::into_processed(item),
+			Item::Enum(item) => process_enum::into_processed(item),
 		}
 	}
 }
