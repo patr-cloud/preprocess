@@ -1,0 +1,8 @@
+{
+    "cSpell.words": [
+        "preprocess"
+    ],
+    "rust-analyzer.rustfmt.extraArgs": [
+        "+nightly"
+    ]
+}
