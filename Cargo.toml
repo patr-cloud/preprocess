@@ -1,5 +1,7 @@
 [workspace]
 package.version = "0.2.0"
+package.description = "Preprocesses a struct with built-in preprocessors"
+package.license = "MIT"
 members = [
     "preprocess",
     "preprocess-macro",

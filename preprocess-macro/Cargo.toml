@@ -2,6 +2,8 @@
 edition = "2021"
 name = "preprocess-macro"
 version.workspace = true
+license.workspace = true
+description.workspace = true
 
 [lib]
 proc-macro = true

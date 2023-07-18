@@ -2,6 +2,8 @@
 edition = "2021"
 name = "preprocess"
 version.workspace = true
+license.workspace = true
+description.workspace = true
 
 [dependencies]
 dashmap = "5"
