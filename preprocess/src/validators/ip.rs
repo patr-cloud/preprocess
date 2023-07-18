@@ -9,7 +9,7 @@ use crate::utils::Error;
 #[must_use]
 pub fn validate_ip<'a, T>(domain: T) -> Result<IpAddr, Error>
 where
-	T: Into<Cow<'a, str>> + Clone,
+	T: Into<Cow<'a, str>>,
 {
 	domain
 		.into()
@@ -21,7 +21,7 @@ where
 #[must_use]
 pub fn validate_ipv4<'a, T>(domain: T) -> Result<Ipv4Addr, Error>
 where
-	T: Into<Cow<'a, str>> + Clone,
+	T: Into<Cow<'a, str>>,
 {
 	domain
 		.into()
@@ -33,7 +33,7 @@ where
 #[must_use]
 pub fn validate_ipv6<'a, T>(domain: T) -> Result<Ipv6Addr, Error>
 where
-	T: Into<Cow<'a, str>> + Clone,
+	T: Into<Cow<'a, str>>,
 {
 	domain
 		.into()

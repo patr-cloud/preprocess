@@ -10,11 +10,20 @@ use syn::{
 	Ident,
 	Lit,
 	Meta,
+	Path,
 	Token,
 };
 
 use crate::ext_traits::{ExprExt, LitExpr};
 
+#[derive(Debug)]
+pub enum IpPreprocessorType {
+	V4,
+	V6,
+	Any,
+}
+
+#[derive(Debug)]
 pub enum Preprocessor {
 	// Validators
 	Email,
@@ -23,6 +32,7 @@ pub enum Preprocessor {
 	Length {
 		min: Option<usize>,
 		max: Option<usize>,
+		equal: Option<usize>,
 	},
 	Range {
 		min: Option<usize>,
@@ -34,6 +44,14 @@ pub enum Preprocessor {
 	Regex(String),
 	Nested,
 	Type(String),
+	Ip(IpPreprocessorType),
+
+	// Preprocessors
+	Trim,
+	Lowercase,
+	Uppercase,
+
+	// TODO add later on:
 	// KeyValue {
 	// 	key: Vec<Preprocessor>,
 	// 	value: Vec<Preprocessor>,
@@ -43,12 +61,6 @@ pub enum Preprocessor {
 	// 	then: Vec<Preprocessor>,
 	// },
 	// UUID(type)
-	// IPS
-
-	// Preprocessors
-	Trim,
-	Lowercase,
-	Uppercase,
 }
 
 impl Preprocessor {
@@ -122,14 +134,23 @@ impl Preprocessor {
 					::std::convert::TryInto::<#ident>::try_into
 				}
 			}
+			Preprocessor::Ip(IpPreprocessorType::V4) => quote! {
+				::preprocess::validators::validate_ipv4
+			},
+			Preprocessor::Ip(IpPreprocessorType::V6) => quote! {
+				::preprocess::validators::validate_ipv6
+			},
+			Preprocessor::Ip(IpPreprocessorType::Any) => quote! {
+				::preprocess::validators::validate_ip
+			},
 			Preprocessor::Trim => quote! {
-				::preprocess::preprocessors::trim
+				::preprocess::preprocessors::preprocess_trim
 			},
 			Preprocessor::Lowercase => quote! {
-				::preprocess::preprocessors::lowercase
+				::preprocess::preprocessors::preprocess_lowercase
 			},
 			Preprocessor::Uppercase => quote! {
-				::preprocess::preprocessors::uppercase
+				::preprocess::preprocessors::preprocess_uppercase
 			},
 		}
 	}
@@ -139,7 +160,7 @@ impl Preprocessor {
 			Preprocessor::Email => quote! {},
 			Preprocessor::Domain => quote! {},
 			Preprocessor::Url => quote! {},
-			Preprocessor::Length { min, max } => {
+			Preprocessor::Length { min, max, equal } => {
 				let min = min
 					.map(|min| {
 						quote! {
@@ -162,8 +183,19 @@ impl Preprocessor {
 							::std::option::Option::None
 						}
 					});
+				let equal = equal
+					.map(|equal| {
+						quote! {
+							::std::option::Option::Some(#equal)
+						}
+					})
+					.unwrap_or_else(|| {
+						quote! {
+							::std::option::Option::None
+						}
+					});
 				quote! {
-					, #min, #max
+					, #min, #max, #equal
 				}
 			}
 			Preprocessor::Range { min, max } => {
@@ -205,6 +237,7 @@ impl Preprocessor {
 			},
 			Preprocessor::Nested => quote! {},
 			Preprocessor::Type(_) => quote! {},
+			Preprocessor::Ip(_) => quote! {},
 			Preprocessor::Trim => quote! {},
 			Preprocessor::Lowercase => quote! {},
 			Preprocessor::Uppercase => quote! {},
@@ -231,13 +264,22 @@ impl Preprocessor {
 			Self::Type(r#type) => {
 				r#type.parse().expect("unable to parse token stream")
 			}
-			Self::Trim => "Cow<'static, str>"
+			Self::Ip(IpPreprocessorType::V4) => "::std::net::Ipv4Addr"
 				.parse()
 				.expect("unable to parse token stream"),
-			Self::Lowercase => "Cow<'static, str>"
+			Self::Ip(IpPreprocessorType::V6) => "::std::net::Ipv6Addr"
 				.parse()
 				.expect("unable to parse token stream"),
-			Self::Uppercase => "Cow<'static, str>"
+			Self::Ip(IpPreprocessorType::Any) => "::std::net::IpAddr"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Trim => "::std::borrow::Cow<'static, str>"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Lowercase => "::std::borrow::Cow<'static, str>"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Uppercase => "::std::borrow::Cow<'static, str>"
 				.parse()
 				.expect("unable to parse token stream"),
 		}
@@ -293,7 +335,23 @@ impl TryFrom<Meta> for Preprocessor {
 			Meta::Path(path) if path.is_ident("length") => Ok(Self::Length {
 				min: Some(0),
 				max: None,
+				equal: None,
 			}),
+			// #[preprocess(ip)]
+			Meta::Path(path) if path.is_ident("ip") => {
+				Ok(Self::Ip(IpPreprocessorType::Any))
+			}
+			// #[preprocess(length = 10)]
+			Meta::NameValue(meta) if meta.path.is_ident("length") => {
+				let value = meta.value.require_lit()?.lit.require_int()?;
+				let value_int = value.base10_parse()?;
+
+				Ok(Self::Length {
+					min: None,
+					max: None,
+					equal: Some(value_int),
+				})
+			}
 			// #[preprocess(contains = "some-string")]
 			Meta::NameValue(meta) if meta.path.is_ident("contains") => {
 				Ok(Self::Contains(
@@ -358,15 +416,27 @@ impl TryFrom<Meta> for Preprocessor {
 				};
 				Ok(Self::Type(r#type))
 			}
+			// #[preprocess(ip(v4))]
+			Meta::List(list) if list.path.is_ident("ip") => {
+				let args = list.parse_args::<Path>()?;
+
+				if args.is_ident("v4") {
+					Ok(Self::Ip(IpPreprocessorType::V4))
+				} else if args.is_ident("v6") {
+					Ok(Self::Ip(IpPreprocessorType::V6))
+				} else {
+					Err(Error::new(args.span(), "expected `v4` or `v6`"))
+				}
+			}
 			// #[preprocess(length(min = 1, max = 10))]
 			Meta::List(list) if list.path.is_ident("length") => {
 				let args = list.parse_args_with(
 					Punctuated::<Meta, Token![,]>::parse_terminated,
 				)?;
 
-				let (min, max) = args.into_iter().try_fold(
-					(None, None),
-					|(min, max), meta| match meta {
+				let (min, max, equal) = args.into_iter().try_fold(
+					(None, None, None),
+					|(min, max, equal), meta| match meta {
 						Meta::NameValue(meta) if meta.path.is_ident("min") => {
 							if min.is_some() {
 								return Err(Error::new(
@@ -383,6 +453,7 @@ impl TryFrom<Meta> for Preprocessor {
 										.base10_parse()?,
 								),
 								max,
+								equal,
 							))
 						}
 						Meta::NameValue(meta) if meta.path.is_ident("max") => {
@@ -394,6 +465,28 @@ impl TryFrom<Meta> for Preprocessor {
 							}
 							Ok((
 								min,
+								Some(
+									meta.value
+										.require_lit()?
+										.lit
+										.require_int()?
+										.base10_parse()?,
+								),
+								equal,
+							))
+						}
+						Meta::NameValue(meta)
+							if meta.path.is_ident("equal") =>
+						{
+							if equal.is_some() {
+								return Err(Error::new(
+									meta.span(),
+									"duplicate argument `equal`",
+								));
+							}
+							Ok((
+								min,
+								max,
 								Some(
 									meta.value
 										.require_lit()?
@@ -427,10 +520,10 @@ impl TryFrom<Meta> for Preprocessor {
 				if min.is_none() && max.is_none() {
 					return Err(Error::new(
 						list.span(),
-						"expected at least one argument `min` or `max`",
+						"expected at least one argument `min`, `max` or `equal`",
 					));
 				} else {
-					Ok(Self::Length { min, max })
+					Ok(Self::Length { min, max, equal })
 				}
 			}
 			// #[preprocess(range(min = 1, max = 10))]

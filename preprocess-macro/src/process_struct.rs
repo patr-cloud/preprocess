@@ -184,35 +184,51 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 	};
 
 	let field_preprocessors = match &fields {
-		ProcessedFields::Unit => vec![],
+		ProcessedFields::Unit => quote! {},
 		ProcessedFields::Named(ProcessedNamed { named, .. }) => named
 			.iter()
 			.map(|(field, preprocessors)| {
 				preprocessors
 					.iter()
-					.map(|preprocessor| {
-						preprocessor.into_processor_token_stream(
-							field.ident.as_ref().unwrap(),
-							&field.ty.to_token_stream(),
-						)
-					})
-					.collect::<Vec<_>>()
+					.fold(
+						(quote! {}, field.ty.to_token_stream()),
+						|(mut acc, new_ty), preprocessor| {
+							let new_ty = preprocessor.get_new_type(&new_ty);
+							acc.extend(
+								preprocessor.into_processor_token_stream(
+									field.ident.as_ref().unwrap(),
+									&new_ty,
+								),
+							);
+
+							(acc, new_ty)
+						},
+					)
+					.0
 			})
 			.flatten()
 			.collect(),
 		ProcessedFields::Unnamed(ProcessedUnnamed { unnamed, .. }) => unnamed
 			.iter()
-			.map(|(field, preprocessors)| {
+			.enumerate()
+			.map(|(index, (field, preprocessors))| {
 				preprocessors
 					.iter()
-					.enumerate()
-					.map(|(index, preprocessor)| {
-						preprocessor.into_processor_token_stream(
-							&format_ident!("field_{}", index),
-							&field.ty.to_token_stream(),
-						)
-					})
-					.collect::<Vec<_>>()
+					.fold(
+						(quote! {}, field.ty.to_token_stream()),
+						|(mut acc, new_ty), preprocessor| {
+							let new_ty = preprocessor.get_new_type(&new_ty);
+							acc.extend(
+								preprocessor.into_processor_token_stream(
+									&format_ident!("field_{}", index),
+									&new_ty,
+								),
+							);
+
+							(acc, new_ty)
+						},
+					)
+					.0
 			})
 			.flatten()
 			.collect(),
@@ -239,8 +255,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 				let #ident
 					#field_names_destructured = value;
 
-				#(#field_preprocessors
-				)*
+				#field_preprocessors
 
 				Ok(#processed_ident
 					#field_names_destructured

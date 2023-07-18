@@ -5,6 +5,10 @@
 /// An attribute macro for preprocessing structs
 pub use preprocess_macro::sync;
 
+/// Error type for the library. This type is used to return errors from the
+/// preprocessors and validators.
+pub use crate::utils::Error;
+
 /// List of all the preprocessors that mutates the given field, including
 /// changing the type if required.
 pub mod preprocessors;
@@ -12,7 +16,7 @@ pub mod preprocessors;
 pub mod utils;
 /// List of all the validators that validates the given field without mutating
 /// it. The type of the field may still be changed. For example, the
-/// [`ip`](crate::validators::ip::validate_ip) validator will change the type
+/// [`ip`](crate::validators::validate_ip) validator will change the type
 /// of the field to [`IpAddr`](std::net::IpAddr).
 pub mod validators;
 
@@ -39,4 +43,10 @@ pub mod prelude {
 	/// An alias for [`std::result::Result`] with the error type set to
 	/// [`Error`].
 	pub type Result<T> = std::result::Result<T, Error>;
+}
+
+/// A list of all the types that are re-exported from supporting crates. Used by
+/// the preprocessor to set the types for a field if required.
+pub mod types {
+	pub use url::Url;
 }
