@@ -10,14 +10,10 @@ package.authors = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
 package.edition = "2021"
 package.keywords = [
     "preprocess",
-    "derive",
-    "macro",
-    "procedural-macro",
-    "proc-macro",
-    "preprocessor",
-    "preprocessing",
-    "preprocess-macro",
-    "preprocess-test",
+    "validation",
+    "api",
+    "test",
+    "process"
 ]
 members = ["preprocess", "preprocess-macro", "preprocess-test"]
 
