@@ -87,9 +87,9 @@
 //! | [`does_not_contain`](`crate::validators#does_not_contain`) | Validates if a string does not contain a substring. |
 //! | [`regex`](`crate::validators#regex`)                       | Validates a string using a regex.                   |
 //! | [`type`](#enforcing-the-type-of-a-value)                   | Enforces the type of a value using `TryFrom`.       |
-//! | [`trim`](`crate::validators#trim`)                         | Trims a string.                                     |
-//! | [`lowercase`](`crate::validators#lowercase`)               | Converts a string to lowercase.                     |
-//! | [`uppercase`](`crate::validators#uppercase`)               | Converts a string to uppercase.                     |
+//! | [`trim`](`crate::preprocessors#trim`)                      | Trims a string.                                     |
+//! | [`lowercase`](`crate::preprocessors#lowercase`)            | Converts a string to lowercase.                     |
+//! | [`uppercase`](`crate::preprocessors#uppercase`)            | Converts a string to uppercase.                     |
 //! | [`custom`](#custom-preprocessors)                          | Validates a string using a custom function.         |
 //!
 //! More details about each preprocessor can be found in the respective module
