@@ -1,13 +1,19 @@
 [package]
-edition = "2021"
 name = "preprocess"
+edition.workspace = true
 version.workspace = true
-license.workspace = true
 description.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+keywords.workspace = true
 
 [dependencies]
 dashmap = "5"
 idna = "0.4"
-preprocess-macro = { path = "../preprocess-macro" }
-regex = "1"
+preprocess-macro = { workspace = true }
+regex = { workspace = true }
 url = "2"

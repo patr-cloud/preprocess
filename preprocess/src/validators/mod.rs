@@ -49,9 +49,9 @@
 //! # Does Not Contain
 //!
 //! The `does_not_contain` validator checks if the given value does not contain
-//! the given substring using the [`Contains`](crate::validators::Contains) trait. This
-//! is the opposite of the [`contains`](crate::validators::validate_contains)
-//! validator.
+//! the given substring using the [`Contains`](crate::validators::Contains)
+//! trait. This is the opposite of the
+//! [`contains`](crate::validators::validate_contains) validator.
 //! For all practical purposes, this validator is basically `!contains`.
 //!
 //! The `lowercase` preprocessor converts all the characters in the given value

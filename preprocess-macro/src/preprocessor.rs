@@ -50,7 +50,6 @@ pub enum Preprocessor {
 	Trim,
 	Lowercase,
 	Uppercase,
-
 	// TODO add later on:
 	// KeyValue {
 	// 	key: Vec<Preprocessor>,

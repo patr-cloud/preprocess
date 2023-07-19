@@ -1,11 +1,27 @@
 [workspace]
-package.version = "0.2.0"
+package.version = "0.2.1"
 package.description = "Preprocesses a struct with built-in preprocessors"
 package.license = "MIT"
-members = [
+package.repository = "https://github.com/patr-cloud/preprocess"
+package.documentation = "https://docs.rs/preprocess"
+package.homepage = "https://docs.rs/preprocess"
+package.readme = "README.md"
+package.authors = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
+package.edition = "2021"
+package.keywords = [
     "preprocess",
+    "derive",
+    "macro",
+    "procedural-macro",
+    "proc-macro",
+    "preprocessor",
+    "preprocessing",
     "preprocess-macro",
     "preprocess-test",
 ]
+members = ["preprocess", "preprocess-macro", "preprocess-test"]
 
-
+[dependencies]
+regex = "1"
+preprocess-macro = { path = "./preprocess-macro", version = "0.2.1" }
+preprocess = { path = "./preprocess", version = "0.2.1" }
