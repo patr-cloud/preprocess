@@ -21,7 +21,7 @@ package.keywords = [
 ]
 members = ["preprocess", "preprocess-macro", "preprocess-test"]
 
-[dependencies]
+[workspace.dependencies]
 regex = "1"
 preprocess-macro = { path = "./preprocess-macro", version = "0.2.1" }
 preprocess = { path = "./preprocess", version = "0.2.1" }
