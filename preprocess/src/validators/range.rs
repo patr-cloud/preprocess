@@ -1,7 +1,11 @@
 /// Validates that the given `value` is inside the defined range. The `max` and
 /// `min` parameters are optional and will only be validated if they are not
 /// `None`
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_range<T>(value: T, min: Option<T>, max: Option<T>) -> bool
 where
 	T: PartialOrd + PartialEq,

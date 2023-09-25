@@ -15,13 +15,17 @@ use crate::utils::Error;
 /// #[preprocess::sync]
 /// #[derive(Debug, Deserialize, Serialize)]
 /// pub struct AddDomainRequest {
-/// 	#[preprocess(domain)]
-/// 	pub domain: String,
+///     #[preprocess(domain)]
+///     pub domain: String,
 /// }
 /// ```
 ///
 /// [`validate_ip`]: crate::validators::ip::validate_ip
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_domain<'a, T>(domain: T) -> Result<T, Error>
 where
 	T: Into<Cow<'a, str>> + Clone,

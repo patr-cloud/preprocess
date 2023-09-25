@@ -13,13 +13,17 @@ use crate::utils::Error;
 /// #[preprocess::sync]
 /// #[derive(Debug, Deserialize, Serialize)]
 /// pub struct SetUrlRequest {
-/// 	#[preprocess(url)]
-/// 	pub url: String,
+///     #[preprocess(url)]
+///     pub url: String,
 /// }
 /// ```
 ///
 /// [`validate_ip`]: crate::validators::ip::validate_ip
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_url<'a, T>(domain: T) -> Result<crate::types::Url, Error>
 where
 	T: Into<Cow<'a, str>>,

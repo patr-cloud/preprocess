@@ -6,7 +6,11 @@ use std::{
 use crate::utils::Error;
 
 /// Checks if a given string is a valid ip address or not
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_ip<'a, T>(domain: T) -> Result<IpAddr, Error>
 where
 	T: Into<Cow<'a, str>>,
@@ -18,7 +22,11 @@ where
 }
 
 /// Checks if a given string is a valid ipv4 address or not
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_ipv4<'a, T>(domain: T) -> Result<Ipv4Addr, Error>
 where
 	T: Into<Cow<'a, str>>,
@@ -30,7 +38,11 @@ where
 }
 
 /// Checks if a given string is a valid ipv6 address or not
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_ipv6<'a, T>(domain: T) -> Result<Ipv6Addr, Error>
 where
 	T: Into<Cow<'a, str>>,

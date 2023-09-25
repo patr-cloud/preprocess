@@ -147,7 +147,7 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 					named,
 					brace_token,
 				}) => Fields::Named(FieldsNamed {
-					brace_token: brace_token.clone(),
+					brace_token: *brace_token,
 					named: named
 						.iter()
 						.map(|(field, preprocessors)| {
@@ -167,7 +167,7 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 								vis: field.vis.clone(),
 								mutability: field.mutability.clone(),
 								ident: field.ident.clone(),
-								colon_token: field.colon_token.clone(),
+								colon_token: field.colon_token,
 								ty,
 							})
 						})
@@ -177,7 +177,7 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 					unnamed,
 					paren_token,
 				}) => Fields::Unnamed(FieldsUnnamed {
-					paren_token: paren_token.clone(),
+					paren_token: *paren_token,
 					unnamed: unnamed
 						.iter()
 						.map(|(field, preprocessors)| {
@@ -197,7 +197,7 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 								vis: field.vis.clone(),
 								mutability: field.mutability.clone(),
 								ident: field.ident.clone(),
-								colon_token: field.colon_token.clone(),
+								colon_token: field.colon_token,
 								ty,
 							})
 						})
@@ -214,7 +214,7 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 		.collect::<Result<Vec<_>, Error>>()?;
 
 	let global_preprocessors = global.into_iter().map(|preprocessor| {
-		preprocessor.into_processor_token_stream(
+		preprocessor.as_processor_token_stream(
 			&format_ident!("value"),
 			&ident.to_token_stream(),
 		)
@@ -255,35 +255,53 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 			ProcessedFields::Unit => vec![],
 			ProcessedFields::Named(ProcessedNamed { named, .. }) => named
 				.iter()
-				.map(|(field, preprocessors)| {
+				.flat_map(|(field, preprocessors)| {
 					preprocessors
 						.iter()
-						.map(|preprocessor| {
-							preprocessor.into_processor_token_stream(
-								field.ident.as_ref().unwrap(),
-								&field.ty.to_token_stream(),
-							)
-						})
-						.collect::<Vec<_>>()
+						.fold(
+							(quote! {}, field.ty.to_token_stream()),
+							|(mut acc, new_ty), preprocessor| {
+								let new_ty = preprocessor.get_new_type(&new_ty);
+								acc.extend(
+									preprocessor.as_processor_token_stream(
+										field.ident.as_ref().unwrap(),
+										&new_ty,
+									),
+								);
+
+								(acc, new_ty)
+							},
+						)
+						.0
 				})
-				.flatten()
 				.collect(),
 			ProcessedFields::Unnamed(ProcessedUnnamed { unnamed, .. }) => {
 				unnamed
 					.iter()
-					.map(|(field, preprocessors)| {
+					.enumerate()
+					.flat_map(|(index, (field, preprocessors))| {
 						preprocessors
 							.iter()
-							.enumerate()
-							.map(|(index, preprocessor)| {
-								preprocessor.into_processor_token_stream(
-									&format_ident!("field_{}", index),
-									&field.ty.to_token_stream(),
-								)
-							})
-							.collect::<Vec<_>>()
+							.fold(
+								(quote! {}, field.ty.to_token_stream()),
+								|(mut acc, new_ty), preprocessor| {
+									let new_ty =
+										preprocessor.get_new_type(&new_ty);
+									acc.extend(
+										preprocessor
+											.as_processor_token_stream(
+												&format_ident!(
+													"field_{}", index
+												),
+												&new_ty,
+											),
+									);
+
+									(acc, new_ty)
+								},
+							)
+							.0
 					})
-					.flatten()
 					.collect()
 			}
 		};
@@ -308,12 +326,14 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 		}
 
 		#(#attrs)*
-		#vis struct #processed_ident #generics {
+		#vis enum #processed_ident #generics {
 			#(#new_variants,)*
 		}
 
-		impl #impl_generics #ident #ty_generics #where_clause {
-			pub fn preprocess(self) -> ::std::result::Result<#processed_ident #ty_generics, ::preprocess::Error> {
+		impl #impl_generics ::preprocess::Preprocessable for #ident #ty_generics #where_clause {
+			type Processed = #processed_ident #ty_generics;
+
+			fn preprocess(self) -> ::std::result::Result<#processed_ident #ty_generics, ::preprocess::Error> {
 				let value = self;
 
 				#(#global_preprocessors

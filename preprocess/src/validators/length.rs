@@ -123,7 +123,11 @@ impl<T> HasLen for BTreeSet<T> {
 ///
 /// If you apply it on String, don't forget that the length can be different
 /// from the number of visual characters for Unicode
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_length<T: HasLen>(
 	value: T,
 	min: Option<usize>,

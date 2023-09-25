@@ -13,8 +13,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(lowercase)]
-//! 	pub my_string: String,
+//!     #[preprocess(lowercase)]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -28,8 +28,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(uppercase)]
-//! 	pub my_string: String,
+//!     #[preprocess(uppercase)]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -43,8 +43,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(trim)]
-//! 	pub my_string: String,
+//!     #[preprocess(trim)]
+//!     pub my_string: String,
 //! }
 //! ```
 

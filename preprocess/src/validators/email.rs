@@ -20,13 +20,17 @@ static EMAIL_USER_REGEX: OnceLock<Regex> = OnceLock::new();
 /// #[preprocess::sync]
 /// #[derive(Debug, Deserialize, Serialize)]
 /// pub struct LoginRequest {
-/// 	#[preprocess(email)]
-/// 	pub email: String,
-/// 	#[preprocess(custom = "validate_password")]
-/// 	pub password: String,
+///     #[preprocess(email)]
+///     pub email: String,
+///     #[preprocess(custom = "validate_password")]
+///     pub password: String,
 /// }
 /// ```
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_email<'a, T>(input: T) -> Result<T>
 where
 	T: Into<Cow<'a, str>> + Clone,
@@ -37,7 +41,7 @@ where
 	}
 	let Some((user_part, domain_part)) = val.split_once('@') else {
 		return Err(Error::new("email is missing '@'"));
-    };
+	};
 
 	// validate the length of the user part of the email, BEFORE doing the regex
 	// according to RFC5321 the max length of the local part is 64 characters

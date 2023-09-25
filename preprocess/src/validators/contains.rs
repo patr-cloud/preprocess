@@ -14,7 +14,11 @@ use crate::utils::Error;
 /// `validate_contains` validator
 pub trait Contains {
 	/// Checks if the value contains the given needle
-	#[must_use]
+	#[must_use = concat!(
+		"validation returns a new value instead of mutating the input.",
+		" The returned value will contain the validated value,",
+		" while the input will remain unchanged"
+	)]
 	fn contains(&self, needle: &str) -> bool;
 }
 
@@ -42,7 +46,7 @@ impl<'a> Contains for Cow<'a, str> {
 	}
 }
 
-impl<'a, T> Contains for Vec<T>
+impl<T> Contains for Vec<T>
 where
 	T: Display,
 {
@@ -60,7 +64,7 @@ where
 	}
 }
 
-impl<'a, T> Contains for &[T]
+impl<'a, T> Contains for &'a [T]
 where
 	T: Display,
 {
@@ -69,7 +73,7 @@ where
 	}
 }
 
-impl<'a, T, const N: usize> Contains for [T; N]
+impl<T, const N: usize> Contains for [T; N]
 where
 	T: Display,
 {
@@ -78,7 +82,7 @@ where
 	}
 }
 
-impl<'a, T, const N: usize> Contains for &[T; N]
+impl<'a, T, const N: usize> Contains for &'a [T; N]
 where
 	T: Display,
 {
@@ -96,7 +100,7 @@ where
 	}
 }
 
-impl<'a, K, V, S> Contains for HashMap<K, V, S>
+impl<K, V, S> Contains for HashMap<K, V, S>
 where
 	K: Display,
 {
@@ -114,7 +118,7 @@ where
 	}
 }
 
-impl<'a, T, S> Contains for HashSet<T, S>
+impl<T, S> Contains for HashSet<T, S>
 where
 	T: Display,
 {
@@ -132,7 +136,7 @@ where
 	}
 }
 
-impl<'a, K, V> Contains for BTreeMap<K, V>
+impl<K, V> Contains for BTreeMap<K, V>
 where
 	K: Display,
 {
@@ -150,7 +154,7 @@ where
 	}
 }
 
-impl<'a, T> Contains for BTreeSet<T>
+impl<T> Contains for BTreeSet<T>
 where
 	T: Display,
 {
@@ -163,12 +167,16 @@ where
 /// The value needs to implement the Contains trait, which is implement on
 /// [`String`], [`str`], [`Vec`], [`HashMap<String>`] and [`BTreeMap<String>`]
 /// by default.
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_contains<T: Contains>(
 	val: T,
 	needle: &str,
 ) -> Result<T, Error> {
-	val.contains(needle).then(|| val).ok_or_else(|| {
+	val.contains(needle).then_some(val).ok_or_else(|| {
 		Error::new(format!("Value does not contain the needle '{}'", needle))
 	})
 }

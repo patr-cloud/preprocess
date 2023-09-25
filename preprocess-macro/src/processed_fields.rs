@@ -130,7 +130,7 @@ impl ToTokens for ProcessedFields {
 						.iter()
 						.map(|(field, _)| field.clone())
 						.collect(),
-					brace_token: brace_token.clone(),
+					brace_token: *brace_token,
 				})
 				.to_tokens(tokens)
 			}
@@ -142,7 +142,7 @@ impl ToTokens for ProcessedFields {
 					.iter()
 					.map(|(field, _)| field.clone())
 					.collect(),
-				paren_token: paren_token.clone(),
+				paren_token: *paren_token,
 			})
 			.to_tokens(tokens),
 		}

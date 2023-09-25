@@ -21,9 +21,9 @@ impl Parse for Item {
 	}
 }
 
-impl Into<TokenStream> for Item {
-	fn into(self) -> TokenStream {
-		match self {
+impl From<Item> for TokenStream {
+	fn from(val: Item) -> Self {
+		match val {
 			Item::Struct(item) => item.into_token_stream().into(),
 			Item::Enum(item) => item.into_token_stream().into(),
 		}
@@ -38,7 +38,7 @@ impl Item {
 		};
 
 		match result {
-			Ok(token_stream) => token_stream.into(),
+			Ok(token_stream) => token_stream,
 			Err(error) => error.to_compile_error().into(),
 		}
 	}

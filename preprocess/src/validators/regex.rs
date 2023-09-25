@@ -18,13 +18,17 @@ static REGEX_LIST: OnceLock<DashMap<String, Regex>> = OnceLock::new();
 /// #[preprocess::sync]
 /// #[derive(Debug, Deserialize, Serialize)]
 /// pub struct LoginRequest {
-/// 	#[preprocess(custom = "validate_regex")]
-/// 	pub email: String,
-/// 	#[preprocess(regex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$")]
-/// 	pub password: String,
+///     #[preprocess(custom = "validate_regex")]
+///     pub email: String,
+///     #[preprocess(regex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$")]
+///     pub password: String,
 /// }
 /// ```
-#[must_use]
+#[must_use = concat!(
+	"validation returns a new value instead of mutating the input.",
+	" The returned value will contain the validated value,",
+	" while the input will remain unchanged"
+)]
 pub fn validate_regex<'a, T>(value: T, regex: &str) -> Result<T, Error>
 where
 	T: Into<Cow<'a, str>> + Clone,
@@ -35,13 +39,13 @@ where
 	}
 
 	REGEX_LIST
-		.get_or_init(|| DashMap::new())
+		.get_or_init(DashMap::new)
 		.entry(regex.to_string())
 		.or_try_insert_with(|| {
 			Regex::new(regex)
 				.map_err(|err| Error::new(format!("invalid regex: {}", err)))
 		})?
 		.is_match(&val)
-		.then(|| value)
+		.then_some(value)
 		.ok_or_else(|| Error::new("regex validation failed"))
 }

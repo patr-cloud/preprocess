@@ -93,7 +93,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 		ProcessedFields::Unit => Fields::Unit,
 		ProcessedFields::Named(ProcessedNamed { named, brace_token }) => {
 			Fields::Named(FieldsNamed {
-				brace_token: brace_token.clone(),
+				brace_token: *brace_token,
 				named: named
 					.iter()
 					.map(|(field, preprocessors)| {
@@ -113,7 +113,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 							vis: field.vis.clone(),
 							mutability: field.mutability.clone(),
 							ident: field.ident.clone(),
-							colon_token: field.colon_token.clone(),
+							colon_token: field.colon_token,
 							ty,
 						})
 					})
@@ -124,7 +124,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 			unnamed,
 			paren_token,
 		}) => Fields::Unnamed(FieldsUnnamed {
-			paren_token: paren_token.clone(),
+			paren_token: *paren_token,
 			unnamed: unnamed
 				.iter()
 				.map(|(field, preprocessors)| {
@@ -142,7 +142,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 						vis: field.vis.clone(),
 						mutability: field.mutability.clone(),
 						ident: field.ident.clone(),
-						colon_token: field.colon_token.clone(),
+						colon_token: field.colon_token,
 						ty,
 					})
 				})
@@ -153,7 +153,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
 	let global_preprocessors = global.into_iter().map(|preprocessor| {
-		preprocessor.into_processor_token_stream(
+		preprocessor.as_processor_token_stream(
 			&format_ident!("value"),
 			&ident.to_token_stream(),
 		)
@@ -187,7 +187,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 		ProcessedFields::Unit => quote! {},
 		ProcessedFields::Named(ProcessedNamed { named, .. }) => named
 			.iter()
-			.map(|(field, preprocessors)| {
+			.flat_map(|(field, preprocessors)| {
 				preprocessors
 					.iter()
 					.fold(
@@ -195,7 +195,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 						|(mut acc, new_ty), preprocessor| {
 							let new_ty = preprocessor.get_new_type(&new_ty);
 							acc.extend(
-								preprocessor.into_processor_token_stream(
+								preprocessor.as_processor_token_stream(
 									field.ident.as_ref().unwrap(),
 									&new_ty,
 								),
@@ -206,12 +206,11 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 					)
 					.0
 			})
-			.flatten()
 			.collect(),
 		ProcessedFields::Unnamed(ProcessedUnnamed { unnamed, .. }) => unnamed
 			.iter()
 			.enumerate()
-			.map(|(index, (field, preprocessors))| {
+			.flat_map(|(index, (field, preprocessors))| {
 				preprocessors
 					.iter()
 					.fold(
@@ -219,7 +218,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 						|(mut acc, new_ty), preprocessor| {
 							let new_ty = preprocessor.get_new_type(&new_ty);
 							acc.extend(
-								preprocessor.into_processor_token_stream(
+								preprocessor.as_processor_token_stream(
 									&format_ident!("field_{}", index),
 									&new_ty,
 								),
@@ -230,7 +229,6 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 					)
 					.0
 			})
-			.flatten()
 			.collect(),
 	};
 
@@ -245,8 +243,10 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 			#new_fields
 		#semi_token
 
-		impl #impl_generics #ident #ty_generics #where_clause {
-			pub fn preprocess(self) -> ::std::result::Result<#processed_ident #ty_generics, ::preprocess::Error> {
+		impl #impl_generics ::preprocess::Preprocessable for #ident #ty_generics #where_clause {
+			type Processed = #processed_ident #ty_generics;
+
+			fn preprocess(self) -> ::std::result::Result<#processed_ident #ty_generics, ::preprocess::Error> {
 				let value = self;
 
 				#(#global_preprocessors

@@ -86,7 +86,7 @@ impl Preprocessor {
 			.require_list()?
 			.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?
 			.into_iter()
-			.map(|meta| Preprocessor::try_from(meta))
+			.map(Preprocessor::try_from)
 			.collect::<Result<Vec<_>, Error>>()
 	}
 
@@ -284,7 +284,7 @@ impl Preprocessor {
 		}
 	}
 
-	pub fn into_processor_token_stream(
+	pub fn as_processor_token_stream(
 		&self,
 		field_name: &Ident,
 		ty: &TokenStream2,
@@ -392,7 +392,7 @@ impl TryFrom<Meta> for Preprocessor {
 							return Err(Error::new(
 								meta.span(),
 								"only string literals are allowed here",
-							))
+							));
 						};
 						lit_str.value()
 					}
@@ -516,11 +516,11 @@ impl TryFrom<Meta> for Preprocessor {
 					},
 				)?;
 
-				if min.is_none() && max.is_none() {
-					return Err(Error::new(
+				if min.is_none() && max.is_none() && equal.is_none() {
+					Err(Error::new(
 						list.span(),
 						"expected at least one argument `min`, `max` or `equal`",
-					));
+					))
 				} else {
 					Ok(Self::Length { min, max, equal })
 				}
@@ -592,10 +592,10 @@ impl TryFrom<Meta> for Preprocessor {
 				)?;
 
 				if min.is_none() && max.is_none() {
-					return Err(Error::new(
+					Err(Error::new(
 						list.span(),
 						"expected at least one argument `min` or `max`",
-					));
+					))
 				} else {
 					Ok(Self::Range { min, max })
 				}
@@ -605,7 +605,7 @@ impl TryFrom<Meta> for Preprocessor {
 				if let Some(ident) = value.path().get_ident() {
 					format!("unexpected preprocessor `{}`", ident)
 				} else {
-					format!("unexpected preprocessor")
+					"unexpected preprocessor".to_string()
 				},
 			)),
 		}

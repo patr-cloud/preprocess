@@ -30,9 +30,9 @@
 //! pub struct MyString(String);
 //!
 //! impl Contains for MyString {
-//! 	fn contains(&self, needle: &str) -> bool {
-//! 		self.0.to_string() == needle
-//! 	}
+//!     fn contains(&self, needle: &str) -> bool {
+//!         self.0.to_string() == needle
+//!     }
 //! }
 //! ```
 //!
@@ -41,8 +41,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(contains = "foo")]
-//! 	pub my_string: String,
+//!     #[preprocess(contains = "foo")]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -62,8 +62,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocessor(lowercase)]
-//! 	pub my_string: String,
+//!     #[preprocessor(lowercase)]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -85,8 +85,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(domain)]
-//! 	pub domain: String,
+//!     #[preprocess(domain)]
+//!     pub domain: String,
 //! }
 //! ```
 //!
@@ -99,8 +99,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(email)]
-//! 	pub email: String,
+//!     #[preprocess(email)]
+//!     pub email: String,
 //! }
 //! ```
 //!
@@ -119,24 +119,24 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(ip)]
-//! 	pub ip: String, // This type will be changed to IpAddr
+//!     #[preprocess(ip)]
+//!     pub ip: String, // This type will be changed to IpAddr
 //! }
 //! ```
 //!
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocessor(ipv4)]
-//! 	pub ipv4: String, // This type will be changed to Ipv4Addr
+//!     #[preprocessor(ipv4)]
+//!     pub ipv4: String, // This type will be changed to Ipv4Addr
 //! }
 //! ```
 //!
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocessor(ipv6)]
-//! 	pub ipv6: String, // This type will be changed to Ipv6Addr
+//!     #[preprocessor(ipv6)]
+//!     pub ipv6: String, // This type will be changed to Ipv6Addr
 //! }
 //! ```
 //!
@@ -168,9 +168,9 @@
 //! pub struct MyString(String);
 //!
 //! impl HasLen for MyString {
-//! 	fn length(&self) -> usize {
-//! 		self.0.to_string().len()
-//! 	}
+//!     fn length(&self) -> usize {
+//!         self.0.to_string().len()
+//!     }
 //! }
 //! ```
 //!
@@ -179,17 +179,17 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(length(min = 5, max = 10))]
-//! 	pub my_string: String,
+//!     #[preprocess(length(min = 5, max = 10))]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(length(equal = 5))]
-//! 	// You can also use #[preprocess(length = 5)] as a shorthand
-//! 	pub my_string: String,
+//!     #[preprocess(length(equal = 5))]
+//!     // You can also use #[preprocess(length = 5)] as a shorthand
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -206,8 +206,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(range(min = 5, max = 10))]
-//! 	pub my_string: String,
+//!     #[preprocess(range(min = 5, max = 10))]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -224,8 +224,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(regex = r"^[a-zA-Z0-9]+$")]
-//! 	pub my_string: String,
+//!     #[preprocess(regex = r"^[a-zA-Z0-9]+$")]
+//!     pub my_string: String,
 //! }
 //! ```
 //!
@@ -240,8 +240,8 @@
 //! ```rust
 //! #[preprocess::sync]
 //! pub struct MyStruct {
-//! 	#[preprocess(url)]
-//! 	pub url: String, // This type will be changed to Url
+//!     #[preprocess(url)]
+//!     pub url: String, // This type will be changed to Url
 //! }
 //! ```
 
