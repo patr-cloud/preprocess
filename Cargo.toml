@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-package.version = "0.3.0"
+package.version = "0.3.1"
 package.description = "Preprocesses a struct with built-in preprocessors"
 package.license = "MIT"
 package.repository = "https://github.com/patr-cloud/preprocess"

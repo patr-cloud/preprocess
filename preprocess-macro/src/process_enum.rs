@@ -326,7 +326,7 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 		}
 
 		#(#attrs)*
-		#vis enum #processed_ident #generics {
+		#vis #enum_token #processed_ident #generics {
 			#(#new_variants,)*
 		}
 

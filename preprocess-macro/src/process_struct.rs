@@ -239,7 +239,7 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 		#semi_token
 
 		#(#attrs)*
-		#vis struct #processed_ident #generics
+		#vis #struct_token #processed_ident #generics
 			#new_fields
 		#semi_token
 
