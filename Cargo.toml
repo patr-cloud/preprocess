@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-package.version = "0.3.2"
+package.version = "0.3.3"
 package.description = "Preprocesses a struct with built-in preprocessors"
 package.license = "MIT"
 package.repository = "https://github.com/patr-cloud/preprocess"
@@ -20,5 +20,5 @@ members = ["preprocess", "preprocess-macro", "preprocess-test"]
 
 [workspace.dependencies]
 regex = "1"
-preprocess-macro = { path = "./preprocess-macro", version = "0.3.2" }
-preprocess = { path = "./preprocess", version = "0.3.2" }
+preprocess-macro = { path = "./preprocess-macro", version = "0.3.3" }
+preprocess = { path = "./preprocess", version = "0.3.3" }
