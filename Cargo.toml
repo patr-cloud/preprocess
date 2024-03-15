@@ -20,5 +20,5 @@ members = ["preprocess", "preprocess-macro", "preprocess-test"]
 
 [workspace.dependencies]
 regex = "1"
-preprocess-macro = { path = "./preprocess-macro", version = "0.3.0" }
-preprocess = { path = "./preprocess", version = "0.3.0" }
+preprocess-macro = { path = "./preprocess-macro", version = "0.3.2" }
+preprocess = { path = "./preprocess", version = "0.3.2" }
