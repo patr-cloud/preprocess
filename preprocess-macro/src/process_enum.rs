@@ -288,13 +288,10 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 									let new_ty =
 										preprocessor.get_new_type(&new_ty);
 									acc.extend(
-										preprocessor
-											.as_processor_token_stream(
-												&format_ident!(
-													"field_{}", index
-												),
-												&new_ty,
-											),
+										preprocessor.as_processor_token_stream(
+											&format_ident!("field_{}", index),
+											&new_ty,
+										),
 									);
 
 									(acc, new_ty)
@@ -305,6 +302,12 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 					.collect()
 			}
 		};
+
+		// Don't include docs for the match arm
+		let attrs = attrs
+			.iter()
+			.cloned()
+			.filter(|attr| !attr.path().is_ident("doc"));
 
 		quote! {
 			#(#attrs) *

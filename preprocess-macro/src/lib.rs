@@ -1,5 +1,12 @@
 use proc_macro::TokenStream;
-use syn::{parse::Parse, ItemEnum, ItemStruct, __private::ToTokens};
+use syn::{
+	parse::Parse,
+	Attribute,
+	ItemEnum,
+	ItemStruct,
+	Token,
+	__private::ToTokens,
+};
 
 mod ext_traits;
 mod preprocessor;
@@ -14,10 +21,20 @@ enum Item {
 
 impl Parse for Item {
 	fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-		input
-			.parse::<ItemStruct>()
-			.map(Item::Struct)
-			.or_else(|_| input.parse::<ItemEnum>().map(Item::Enum))
+		let attrs = input.call(Attribute::parse_outer)?;
+		let vis = input.parse()?;
+
+		if input.peek(Token![struct]) {
+			input
+				.parse()
+				.map(|item: ItemStruct| ItemStruct { vis, attrs, ..item })
+				.map(Item::Struct)
+		} else {
+			input
+				.parse()
+				.map(|item: ItemEnum| ItemEnum { attrs, vis, ..item })
+				.map(Item::Enum)
+		}
 	}
 }
 

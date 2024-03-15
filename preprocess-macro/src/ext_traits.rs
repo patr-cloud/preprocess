@@ -28,6 +28,7 @@ impl ExprExt for Expr {
 pub trait LitExpr {
 	fn require_str(self) -> Result<LitStr, Error>;
 	fn require_int(self) -> Result<LitInt, Error>;
+	#[allow(dead_code)]
 	fn require_float(self) -> Result<LitFloat, Error>;
 }
 
