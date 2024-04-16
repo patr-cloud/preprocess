@@ -120,7 +120,7 @@ impl TryFrom<ItemEnum> for ParsedEnum {
 	}
 }
 
-pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
+pub fn into_processed(item: ItemEnum, strict_mode: bool) -> Result<TokenStream, Error> {
 	let parsed: ParsedEnum = item.try_into()?;
 
 	let ParsedEnum {
@@ -151,6 +151,12 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 					named: named
 						.iter()
 						.map(|(field, preprocessors)| {
+							if strict_mode && preprocessors.is_empty() {
+								return Err(Error::new_spanned(
+									field,
+									"every field must have at least one preprocessor in strict mode",
+								));
+							}
 							let new_type = preprocessors
 								.iter()
 								.fold(
@@ -181,6 +187,12 @@ pub fn into_processed(item: ItemEnum) -> Result<TokenStream, Error> {
 					unnamed: unnamed
 						.iter()
 						.map(|(field, preprocessors)| {
+							if strict_mode && preprocessors.is_empty() {
+								return Err(Error::new_spanned(
+									field,
+									"every field must have at least one preprocessor in strict mode",
+								));
+							}
 							let new_type = preprocessors
 								.iter()
 								.fold(

@@ -1,12 +1,6 @@
 use proc_macro::TokenStream;
-use syn::{
-	parse::Parse,
-	Attribute,
-	ItemEnum,
-	ItemStruct,
-	Token,
-	__private::ToTokens,
-};
+use quote::ToTokens;
+use syn::{parse::Parse, Attribute, ItemEnum, ItemStruct, Token};
 
 mod ext_traits;
 mod preprocessor;
@@ -48,10 +42,12 @@ impl From<Item> for TokenStream {
 }
 
 impl Item {
-	fn into_processed(self) -> TokenStream {
+	fn into_processed(self, strict_mode: bool) -> TokenStream {
 		let result = match self {
-			Item::Struct(item) => process_struct::into_processed(item),
-			Item::Enum(item) => process_enum::into_processed(item),
+			Item::Struct(item) => {
+				process_struct::into_processed(item, strict_mode)
+			}
+			Item::Enum(item) => process_enum::into_processed(item, strict_mode),
 		};
 
 		match result {
@@ -65,11 +61,40 @@ impl Item {
 pub fn sync(args: TokenStream, input: TokenStream) -> TokenStream {
 	let input = syn::parse_macro_input!(input as Item);
 
-	if let Some(token) = args.into_iter().next() {
-		return syn::Error::new(token.span().into(), "unexpected arguments")
+	let strict_mode = if !args.is_empty() {
+		let meta = syn::parse_macro_input!(args as syn::Meta);
+		let name_value = match meta.require_name_value() {
+			Ok(name_value) => name_value,
+			Err(err) => {
+				return err.to_compile_error().into();
+			}
+		};
+		if !name_value.path.is_ident("strict_mode") {
+			return syn::Error::new_spanned(
+				name_value.path.clone(),
+				"expected `strict_mode` as the attribute argument",
+			)
 			.to_compile_error()
 			.into();
-	}
+		}
 
-	input.into_processed()
+		match &name_value.value {
+			syn::Expr::Lit(syn::ExprLit {
+				attrs: _,
+				lit: syn::Lit::Bool(lit),
+			}) => lit.value,
+			_ => {
+				return syn::Error::new_spanned(
+					name_value.value.clone(),
+					"expected a boolean literal as the attribute argument",
+				)
+				.to_compile_error()
+				.into();
+			}
+		}
+	} else {
+		false
+	};
+
+	input.into_processed(strict_mode)
 }

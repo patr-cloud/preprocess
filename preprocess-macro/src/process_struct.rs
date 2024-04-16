@@ -73,7 +73,7 @@ impl TryFrom<ItemStruct> for ParsedStruct {
 	}
 }
 
-pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
+pub fn into_processed(item: ItemStruct, strict_mode: bool) -> Result<TokenStream, Error> {
 	let parsed: ParsedStruct = item.try_into()?;
 
 	let ParsedStruct {
@@ -97,6 +97,12 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 				named: named
 					.iter()
 					.map(|(field, preprocessors)| {
+						if strict_mode && preprocessors.is_empty() {
+							return Err(Error::new_spanned(
+								field,
+								"every field must have at least one preprocessor in strict mode",
+							));
+						}
 						let new_type = preprocessors
 							.iter()
 							.fold(
@@ -128,6 +134,12 @@ pub fn into_processed(item: ItemStruct) -> Result<TokenStream, Error> {
 			unnamed: unnamed
 				.iter()
 				.map(|(field, preprocessors)| {
+					if strict_mode && preprocessors.is_empty() {
+						return Err(Error::new_spanned(
+							field,
+							"every field must have at least one preprocessor in strict mode",
+						));
+					}
 					let new_type = preprocessors
 						.iter()
 						.fold(

@@ -30,6 +30,8 @@
 //!     #[preprocess(trim, length(min = 8))]
 //!     pub password: String,
 //! }
+//! 
+//! let processed_value = raw_value.preprocess()?;
 //! ```
 //!
 //! ## Inheriting derive attributes
