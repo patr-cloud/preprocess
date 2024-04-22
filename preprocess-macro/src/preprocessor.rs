@@ -25,6 +25,9 @@ pub enum IpPreprocessorType {
 
 #[derive(Debug)]
 pub enum Preprocessor {
+	/// Empty preprocessor
+	None,
+
 	// Validators
 	Email,
 	Domain,
@@ -94,6 +97,9 @@ impl Preprocessor {
 	/// preprocessor.
 	pub fn get_fn_name(&self, ty: &TokenStream2) -> TokenStream2 {
 		match self {
+			Preprocessor::None => quote! {
+				::std::convert::identity
+			},
 			Preprocessor::Email => quote! {
 				::preprocess::validators::validate_email
 			},
@@ -156,6 +162,7 @@ impl Preprocessor {
 
 	pub fn get_fn_args(&self) -> TokenStream2 {
 		match self {
+			Preprocessor::None => quote! {},
 			Preprocessor::Email => quote! {},
 			Preprocessor::Domain => quote! {},
 			Preprocessor::Url => quote! {},
@@ -245,6 +252,7 @@ impl Preprocessor {
 
 	pub fn get_new_type(&self, current_type: &TokenStream2) -> TokenStream2 {
 		match self {
+			Self::None => current_type.clone(),
 			Self::Email => current_type.clone(),
 			Self::Domain => current_type.clone(),
 			Self::Url => "::preprocess::types::Url"
@@ -312,6 +320,8 @@ impl TryFrom<Meta> for Preprocessor {
 	///              ^^^^^^^^^^^^^^^^^^^^^
 	fn try_from(value: Meta) -> Result<Self, Self::Error> {
 		match value {
+			// #[preprocess(none)]
+			Meta::Path(path) if path.is_ident("none") => Ok(Self::None),
 			// #[preprocess(email)]
 			Meta::Path(path) if path.is_ident("email") => Ok(Self::Email),
 			// #[preprocess(domain)]
