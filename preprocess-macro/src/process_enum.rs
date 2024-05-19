@@ -120,7 +120,10 @@ impl TryFrom<ItemEnum> for ParsedEnum {
 	}
 }
 
-pub fn into_processed(item: ItemEnum, strict_mode: bool) -> Result<TokenStream, Error> {
+pub fn into_processed(
+	item: ItemEnum,
+	strict_mode: bool,
+) -> Result<TokenStream, Error> {
 	let parsed: ParsedEnum = item.try_into()?;
 
 	let ParsedEnum {
@@ -318,8 +321,8 @@ pub fn into_processed(item: ItemEnum, strict_mode: bool) -> Result<TokenStream, 
 		// Don't include docs for the match arm
 		let attrs = attrs
 			.iter()
-			.cloned()
-			.filter(|attr| !attr.path().is_ident("doc"));
+			.filter(|attr| !attr.path().is_ident("doc"))
+			.cloned();
 
 		quote! {
 			#(#attrs) *

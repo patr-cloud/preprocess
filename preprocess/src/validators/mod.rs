@@ -249,6 +249,7 @@ mod contains;
 mod does_not_contain;
 mod domain;
 mod email;
+mod empty;
 mod ip;
 mod length;
 mod range;
@@ -260,6 +261,7 @@ pub use self::{
 	does_not_contain::*,
 	domain::*,
 	email::*,
+	empty::*,
 	ip::*,
 	length::*,
 	range::*,

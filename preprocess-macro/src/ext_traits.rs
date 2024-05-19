@@ -1,13 +1,4 @@
-use syn::{
-	spanned::Spanned,
-	Error,
-	Expr,
-	ExprLit,
-	Lit,
-	LitFloat,
-	LitInt,
-	LitStr,
-};
+use syn::{spanned::Spanned, Error, Expr, ExprLit, Lit, LitStr};
 
 pub trait ExprExt
 where
@@ -27,29 +18,12 @@ impl ExprExt for Expr {
 
 pub trait LitExpr {
 	fn require_str(self) -> Result<LitStr, Error>;
-	fn require_int(self) -> Result<LitInt, Error>;
-	#[allow(dead_code)]
-	fn require_float(self) -> Result<LitFloat, Error>;
 }
 
 impl LitExpr for Lit {
 	fn require_str(self) -> Result<LitStr, Error> {
 		match self {
 			Lit::Str(lit) => Ok(lit),
-			_ => Err(Error::new(self.span(), "expected string literal")),
-		}
-	}
-
-	fn require_int(self) -> Result<LitInt, Error> {
-		match self {
-			Lit::Int(lit) => Ok(lit),
-			_ => Err(Error::new(self.span(), "expected string literal")),
-		}
-	}
-
-	fn require_float(self) -> Result<LitFloat, Error> {
-		match self {
-			Lit::Float(lit) => Ok(lit),
 			_ => Err(Error::new(self.span(), "expected string literal")),
 		}
 	}

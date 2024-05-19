@@ -7,8 +7,10 @@ use syn::{
 	Attribute,
 	Error,
 	Expr,
+	ExprLit,
 	Ident,
 	Lit,
+	LitInt,
 	Meta,
 	Path,
 	Token,
@@ -23,7 +25,6 @@ pub enum IpPreprocessorType {
 	Any,
 }
 
-#[derive(Debug)]
 pub enum Preprocessor {
 	/// Empty preprocessor
 	None,
@@ -33,18 +34,18 @@ pub enum Preprocessor {
 	Domain,
 	Url,
 	Length {
-		min: Option<usize>,
-		max: Option<usize>,
-		equal: Option<usize>,
+		min: Option<Expr>,
+		max: Option<Expr>,
+		equal: Option<Expr>,
 	},
 	Range {
-		min: Option<usize>,
-		max: Option<usize>,
+		min: Option<Expr>,
+		max: Option<Expr>,
 	},
 	Contains(String),
 	DoesNotContain(String),
 	Custom(String),
-	Regex(String),
+	Regex(Expr),
 	Nested,
 	Type(String),
 	Ip(IpPreprocessorType),
@@ -98,7 +99,7 @@ impl Preprocessor {
 	pub fn get_fn_name(&self, ty: &TokenStream2) -> TokenStream2 {
 		match self {
 			Preprocessor::None => quote! {
-				::std::convert::identity
+				::preprocess::validators::validate_empty
 			},
 			Preprocessor::Email => quote! {
 				::preprocess::validators::validate_email
@@ -168,6 +169,7 @@ impl Preprocessor {
 			Preprocessor::Url => quote! {},
 			Preprocessor::Length { min, max, equal } => {
 				let min = min
+					.as_ref()
 					.map(|min| {
 						quote! {
 							::std::option::Option::Some(#min)
@@ -179,6 +181,7 @@ impl Preprocessor {
 						}
 					});
 				let max = max
+					.as_ref()
 					.map(|max| {
 						quote! {
 							::std::option::Option::Some(#max)
@@ -190,6 +193,7 @@ impl Preprocessor {
 						}
 					});
 				let equal = equal
+					.as_ref()
 					.map(|equal| {
 						quote! {
 							::std::option::Option::Some(#equal)
@@ -206,6 +210,7 @@ impl Preprocessor {
 			}
 			Preprocessor::Range { min, max } => {
 				let min = min
+					.as_ref()
 					.map(|min| {
 						quote! {
 							::std::option::Option::Some(#min)
@@ -217,6 +222,7 @@ impl Preprocessor {
 						}
 					});
 				let max = max
+					.as_ref()
 					.map(|max| {
 						quote! {
 							::std::option::Option::Some(#max)
@@ -342,7 +348,10 @@ impl TryFrom<Meta> for Preprocessor {
 			}
 			// #[preprocess(length)]
 			Meta::Path(path) if path.is_ident("length") => Ok(Self::Length {
-				min: Some(0),
+				min: Some(Expr::Lit(ExprLit {
+					attrs: vec![],
+					lit: Lit::Int(LitInt::new("0usize", path.span())),
+				})),
 				max: None,
 				equal: None,
 			}),
@@ -352,13 +361,10 @@ impl TryFrom<Meta> for Preprocessor {
 			}
 			// #[preprocess(length = 10)]
 			Meta::NameValue(meta) if meta.path.is_ident("length") => {
-				let value = meta.value.require_lit()?.lit.require_int()?;
-				let value_int = value.base10_parse()?;
-
 				Ok(Self::Length {
 					min: None,
 					max: None,
-					equal: Some(value_int),
+					equal: Some(meta.value),
 				})
 			}
 			// #[preprocess(contains = "some-string")]
@@ -381,17 +387,21 @@ impl TryFrom<Meta> for Preprocessor {
 			}
 			// #[preprocess(regex = "some-string")]
 			Meta::NameValue(meta) if meta.path.is_ident("regex") => {
-				let value = meta.value.require_lit()?.lit.require_str()?;
-				let value_str = value.value();
-
-				if let Err(err) = Regex::new(&value_str) {
-					return Err(Error::new(
-						value.span(),
-						format!("invalid regex: {}", err),
-					));
+				if let Ok(Ok(value)) = meta
+					.value
+					.clone()
+					.require_lit()
+					.map(|lit| lit.lit.require_str().map(|lit| lit.value()))
+				{
+					Regex::new(&value).map_err(|err| {
+						Error::new(
+							value.span(),
+							format!("invalid regex: {}", err),
+						)
+					})?;
 				}
 
-				Ok(Self::Regex(value_str))
+				Ok(Self::Regex(meta.value))
 			}
 			// #[preprocess(type = "String")] or
 			// #[preprocess(type = std::string::String)]
@@ -453,17 +463,7 @@ impl TryFrom<Meta> for Preprocessor {
 									"duplicate argument `min`",
 								));
 							}
-							Ok((
-								Some(
-									meta.value
-										.require_lit()?
-										.lit
-										.require_int()?
-										.base10_parse()?,
-								),
-								max,
-								equal,
-							))
+							Ok((Some(meta.value), max, equal))
 						}
 						Meta::NameValue(meta) if meta.path.is_ident("max") => {
 							if max.is_some() {
@@ -472,17 +472,7 @@ impl TryFrom<Meta> for Preprocessor {
 									"duplicate argument `max`",
 								));
 							}
-							Ok((
-								min,
-								Some(
-									meta.value
-										.require_lit()?
-										.lit
-										.require_int()?
-										.base10_parse()?,
-								),
-								equal,
-							))
+							Ok((min, Some(meta.value), equal))
 						}
 						Meta::NameValue(meta)
 							if meta.path.is_ident("equal") =>
@@ -493,17 +483,7 @@ impl TryFrom<Meta> for Preprocessor {
 									"duplicate argument `equal`",
 								));
 							}
-							Ok((
-								min,
-								max,
-								Some(
-									meta.value
-										.require_lit()?
-										.lit
-										.require_int()?
-										.base10_parse()?,
-								),
-							))
+							Ok((min, max, Some(meta.value)))
 						}
 						meta => {
 							return Err(
@@ -551,16 +531,7 @@ impl TryFrom<Meta> for Preprocessor {
 									"duplicate argument `min`",
 								));
 							}
-							Ok((
-								Some(
-									meta.value
-										.require_lit()?
-										.lit
-										.require_int()?
-										.base10_parse()?,
-								),
-								max,
-							))
+							Ok((Some(meta.value), max))
 						}
 						Meta::NameValue(meta) if meta.path.is_ident("max") => {
 							if max.is_some() {
@@ -569,16 +540,7 @@ impl TryFrom<Meta> for Preprocessor {
 									"duplicate argument `max`",
 								));
 							}
-							Ok((
-								min,
-								Some(
-									meta.value
-										.require_lit()?
-										.lit
-										.require_int()?
-										.base10_parse()?,
-								),
-							))
+							Ok((min, Some(meta.value)))
 						}
 						meta => {
 							return Err(
