@@ -8,7 +8,10 @@ use crate::utils::Error;
 	" The returned value will contain the validated value,",
 	" while the input will remain unchanged"
 )]
-pub fn validate_does_not_contain<T: Contains>(value: T, needle: &str) -> Result<T, Error> {
+pub fn validate_does_not_contain<T: Contains>(
+	value: T,
+	needle: &str,
+) -> Result<T, Error> {
 	(!value.contains(needle)).then_some(value).ok_or_else(|| {
 		Error::new(format!("Value does not contain the needle '{}'", needle))
 	})

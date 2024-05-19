@@ -73,7 +73,10 @@ impl TryFrom<ItemStruct> for ParsedStruct {
 	}
 }
 
-pub fn into_processed(item: ItemStruct, strict_mode: bool) -> Result<TokenStream, Error> {
+pub fn into_processed(
+	item: ItemStruct,
+	strict_mode: bool,
+) -> Result<TokenStream, Error> {
 	let parsed: ParsedStruct = item.try_into()?;
 
 	let ParsedStruct {
@@ -206,12 +209,10 @@ pub fn into_processed(item: ItemStruct, strict_mode: bool) -> Result<TokenStream
 						(quote! {}, field.ty.to_token_stream()),
 						|(mut acc, new_ty), preprocessor| {
 							let new_ty = preprocessor.get_new_type(&new_ty);
-							acc.extend(
-								preprocessor.as_processor_token_stream(
-									field.ident.as_ref().unwrap(),
-									&new_ty,
-								),
-							);
+							acc.extend(preprocessor.as_processor_token_stream(
+								field.ident.as_ref().unwrap(),
+								&new_ty,
+							));
 
 							(acc, new_ty)
 						},
@@ -229,12 +230,10 @@ pub fn into_processed(item: ItemStruct, strict_mode: bool) -> Result<TokenStream
 						(quote! {}, field.ty.to_token_stream()),
 						|(mut acc, new_ty), preprocessor| {
 							let new_ty = preprocessor.get_new_type(&new_ty);
-							acc.extend(
-								preprocessor.as_processor_token_stream(
-									&format_ident!("field_{}", index),
-									&new_ty,
-								),
-							);
+							acc.extend(preprocessor.as_processor_token_stream(
+								&format_ident!("field_{}", index),
+								&new_ty,
+							));
 
 							(acc, new_ty)
 						},
