@@ -1,21 +1,21 @@
 [package]
-name = "preprocess-macro"
-edition.workspace = true
-version.workspace = true
-description.workspace = true
-license.workspace = true
-repository.workspace = true
-documentation.workspace = true
-homepage.workspace = true
-readme.workspace = true
 authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
 keywords.workspace = true
+license.workspace = true
+name = "preprocess-macro"
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [lib]
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1"
-quote = "1"
-regex = { workspace = true }
-syn = { version = "2", features = ["full"] }
+proc-macro2 = { workspace = true, features = ["default"] }
+quote = { workspace = true, features = ["default"] }
+regex = { workspace = true, features = ["default"] }
+syn = { workspace = true, features = ["default", "full"] }

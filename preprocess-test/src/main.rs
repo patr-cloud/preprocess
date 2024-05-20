@@ -8,6 +8,8 @@ pub struct LoginRequest {
 	pub username: String,
 	#[preprocess(trim, length(min = 8), regex = "^[a-z0-9_]+$")]
 	pub password: String,
+	#[preprocess]
+	pub nested: EnumRequest,
 }
 
 #[preprocess::sync]
@@ -34,6 +36,11 @@ fn main() {
 		Preprocessable::preprocess(LoginRequest {
 			username: "  HelloWorld  ".to_string(),
 			password: "  HelloWorld  ".to_string(),
+			nested: EnumRequest::VariantA {
+				username: "  HelloWorld  ".to_string(),
+				password: "  HelloWorld  ".to_string(),
+				optional: Some("  HelloWorld  ".to_string()),
+			},
 		})
 		.unwrap();
 	println!("Hello, world!");

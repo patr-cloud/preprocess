@@ -1,16 +1,16 @@
 [package]
-name = "preprocess-test"
-edition.workspace = true
-version.workspace = true
-description.workspace = true
-license.workspace = true
-repository.workspace = true
-documentation.workspace = true
-homepage.workspace = true
-readme.workspace = true
 authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
 keywords.workspace = true
+license.workspace = true
+name = "preprocess-test"
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 preprocess = { workspace = true }
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true, features = ["default", "derive"] }

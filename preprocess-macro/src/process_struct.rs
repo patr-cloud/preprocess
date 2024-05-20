@@ -208,13 +208,12 @@ pub fn into_processed(
 					.fold(
 						(quote! {}, field.ty.to_token_stream()),
 						|(mut acc, new_ty), preprocessor| {
-							let new_ty = preprocessor.get_new_type(&new_ty);
 							acc.extend(preprocessor.as_processor_token_stream(
 								field.ident.as_ref().unwrap(),
 								&new_ty,
 							));
 
-							(acc, new_ty)
+							(acc, preprocessor.get_new_type(&new_ty))
 						},
 					)
 					.0
