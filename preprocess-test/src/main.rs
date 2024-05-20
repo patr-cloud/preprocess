@@ -24,6 +24,8 @@ pub enum EnumRequest {
 		username: String,
 		#[preprocess(trim, length(min = 8), regex = "^[a-z0-9_]+$")]
 		password: String,
+		#[preprocess(optional(trim))]
+		optional: Option<String>,
 	},
 }
 

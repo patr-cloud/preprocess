@@ -29,6 +29,9 @@ pub enum Preprocessor {
 	/// Empty preprocessor
 	None,
 
+	/// Complex type handlers
+	Optional(Vec<Preprocessor>),
+
 	// Validators
 	Email,
 	Domain,
@@ -94,79 +97,105 @@ impl Preprocessor {
 			.collect::<Result<Vec<_>, Error>>()
 	}
 
-	/// This function gets the function name for the validator of a
-	/// preprocessor.
-	pub fn get_fn_name(&self, ty: &TokenStream2) -> TokenStream2 {
+	pub fn get_new_type(&self, current_type: &TokenStream2) -> TokenStream2 {
 		match self {
-			Preprocessor::None => quote! {
-				::preprocess::validators::validate_empty
-			},
-			Preprocessor::Email => quote! {
-				::preprocess::validators::validate_email
-			},
-			Preprocessor::Domain => quote! {
-				::preprocess::validators::validate_domain
-			},
-			Preprocessor::Url => quote! {
-				::preprocess::validators::validate_url
-			},
-			Preprocessor::Length { .. } => quote! {
-				::preprocess::validators::validate_length
-			},
-			Preprocessor::Range { .. } => quote! {
-				::preprocess::validators::validate_range
-			},
-			Preprocessor::Contains(_) => quote! {
-				::preprocess::validators::validate_contains
-			},
-			Preprocessor::DoesNotContain(_) => quote! {
-				::preprocess::validators::validate_does_not_contain
-			},
-			Preprocessor::Custom(validator) => {
-				let validator = format_ident!("{}", validator);
+			Self::None => current_type.clone(),
+
+			Self::Optional(preprocessors) => {
+				let inner_type = preprocessors
+					.iter()
+					.fold(current_type.clone(), |ty, preprocessor| {
+						preprocessor.get_new_type(&ty)
+					});
 				quote! {
-					#validator
+					::core::option::Option<#inner_type>
 				}
 			}
-			Preprocessor::Regex(_) => quote! {
-				::preprocess::validators::validate_regex
-			},
-			Preprocessor::Nested => quote! {
-				<#ty>::preprocess
-			},
-			Preprocessor::Type(r#type) => {
-				let ident = format_ident!("{}", r#type);
-				quote! {
-					::std::convert::TryInto::<#ident>::try_into
-				}
+
+			Self::Email => current_type.clone(),
+			Self::Domain => current_type.clone(),
+			Self::Url => "::preprocess::types::Url"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Length { .. } => current_type.clone(),
+			Self::Range { .. } => current_type.clone(),
+			Self::Contains(_) => current_type.clone(),
+			Self::DoesNotContain(_) => current_type.clone(),
+			Self::Custom(_) => current_type.clone(),
+			Self::Regex(_) => current_type.clone(),
+			Self::Nested => {
+				let current_type = current_type.to_string();
+				format_ident!("{}Processed", current_type).to_token_stream()
 			}
-			Preprocessor::Ip(IpPreprocessorType::V4) => quote! {
-				::preprocess::validators::validate_ipv4
-			},
-			Preprocessor::Ip(IpPreprocessorType::V6) => quote! {
-				::preprocess::validators::validate_ipv6
-			},
-			Preprocessor::Ip(IpPreprocessorType::Any) => quote! {
-				::preprocess::validators::validate_ip
-			},
-			Preprocessor::Trim => quote! {
-				::preprocess::preprocessors::preprocess_trim
-			},
-			Preprocessor::Lowercase => quote! {
-				::preprocess::preprocessors::preprocess_lowercase
-			},
-			Preprocessor::Uppercase => quote! {
-				::preprocess::preprocessors::preprocess_uppercase
-			},
+			Self::Type(r#type) => {
+				r#type.parse().expect("unable to parse token stream")
+			}
+			Self::Ip(IpPreprocessorType::V4) => "::std::net::Ipv4Addr"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Ip(IpPreprocessorType::V6) => "::std::net::Ipv6Addr"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Ip(IpPreprocessorType::Any) => "::std::net::IpAddr"
+				.parse()
+				.expect("unable to parse token stream"),
+
+			Self::Trim => "::std::borrow::Cow<'static, str>"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Lowercase => "::std::borrow::Cow<'static, str>"
+				.parse()
+				.expect("unable to parse token stream"),
+			Self::Uppercase => "::std::borrow::Cow<'static, str>"
+				.parse()
+				.expect("unable to parse token stream"),
 		}
 	}
 
-	pub fn get_fn_args(&self) -> TokenStream2 {
+	pub fn as_processor_token_stream(
+		&self,
+		field_name: &Ident,
+		ty: &TokenStream2,
+	) -> TokenStream2 {
+		let new_ty = self.get_new_type(ty);
+
 		match self {
 			Preprocessor::None => quote! {},
-			Preprocessor::Email => quote! {},
-			Preprocessor::Domain => quote! {},
-			Preprocessor::Url => quote! {},
+
+			Preprocessor::Optional(preprocessors) => {
+				let mut new_type = ty.clone();
+				let preprocessors = preprocessors
+					.iter()
+					.map(|preprocessor| {
+						new_type = preprocessor.get_new_type(&new_type);
+						preprocessor.as_processor_token_stream(
+							&format_ident!("value"),
+							&new_type,
+						)
+					})
+					.collect::<TokenStream2>();
+				quote! {
+					let #field_name: ::core::option::Option<#new_type> = ::core::option::Option::map::<::core::result::Result<#new_type, ::preprocess::Error>, _>(#field_name, |value| {
+						#preprocessors
+						Ok(value)
+					})
+					.transpose()
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+				}
+			}
+
+			Preprocessor::Email => quote! {
+				let #field_name: #new_ty = ::preprocess::validators::validate_email(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
+			Preprocessor::Domain => quote! {
+				let #field_name: #new_ty = ::preprocess::validators::validate_domain(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
+			Preprocessor::Url => quote! {
+				let #field_name: #new_ty = ::preprocess::validators::validate_url(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
 			Preprocessor::Length { min, max, equal } => {
 				let min = min
 					.as_ref()
@@ -205,7 +234,8 @@ impl Preprocessor {
 						}
 					});
 				quote! {
-					, #min, #max, #equal
+					let #field_name: #new_ty = ::preprocess::validators::validate_length(#field_name, #min, #max, #equal)
+						.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
 				}
 			}
 			Preprocessor::Range { min, max } => {
@@ -233,83 +263,68 @@ impl Preprocessor {
 							::std::option::Option::None
 						}
 					});
+
 				quote! {
-					, #min, #max
+					let #field_name: #new_ty = ::preprocess::validators::validate_range(#field_name, #min, #max)
+						.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
 				}
 			}
 			Preprocessor::Contains(look_for) => quote! {
-				, #look_for
+				let #field_name: #new_ty = ::preprocess::validators::validate_contains(#field_name, #look_for)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
 			},
 			Preprocessor::DoesNotContain(look_for) => quote! {
-				, #look_for
+				let #field_name: #new_ty = ::preprocess::validators::validate_does_not_contain(#field_name, #look_for)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
 			},
-			Preprocessor::Custom(_) => quote! {},
+			Preprocessor::Custom(validator) => {
+				let validator = format_ident!("{validator}");
+				quote! {
+					let #field_name: #new_ty = #validator (#field_name)
+						.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+				}
+			}
 			Preprocessor::Regex(regex) => quote! {
-				, #regex
+				let #field_name: #new_ty = ::preprocess::validators::validate_regex(#field_name, #regex)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
 			},
-			Preprocessor::Nested => quote! {},
-			Preprocessor::Type(_) => quote! {},
-			Preprocessor::Ip(_) => quote! {},
-			Preprocessor::Trim => quote! {},
-			Preprocessor::Lowercase => quote! {},
-			Preprocessor::Uppercase => quote! {},
-		}
-	}
-
-	pub fn get_new_type(&self, current_type: &TokenStream2) -> TokenStream2 {
-		match self {
-			Self::None => current_type.clone(),
-			Self::Email => current_type.clone(),
-			Self::Domain => current_type.clone(),
-			Self::Url => "::preprocess::types::Url"
-				.parse()
-				.expect("unable to parse token stream"),
-			Self::Length { .. } => current_type.clone(),
-			Self::Range { .. } => current_type.clone(),
-			Self::Contains(_) => current_type.clone(),
-			Self::DoesNotContain(_) => current_type.clone(),
-			Self::Custom(_) => current_type.clone(),
-			Self::Regex(_) => current_type.clone(),
-			Self::Nested => {
-				let current_type = current_type.to_string();
-				format_ident!("{}Processed", current_type).to_token_stream()
+			Preprocessor::Nested => quote! {
+				let #field_name: <#ty as ::preprocess::Preprocessable>::Processed = ::preprocess::Preprocessable::preprocess(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
+			Preprocessor::Type(r#type) => {
+				let ident = format_ident!("{}", r#type);
+				quote! {
+					::std::convert::TryInto::<#ident>::try_into
+				}
 			}
-			Self::Type(r#type) => {
-				r#type.parse().expect("unable to parse token stream")
-			}
-			Self::Ip(IpPreprocessorType::V4) => "::std::net::Ipv4Addr"
-				.parse()
-				.expect("unable to parse token stream"),
-			Self::Ip(IpPreprocessorType::V6) => "::std::net::Ipv6Addr"
-				.parse()
-				.expect("unable to parse token stream"),
-			Self::Ip(IpPreprocessorType::Any) => "::std::net::IpAddr"
-				.parse()
-				.expect("unable to parse token stream"),
-			Self::Trim => "::std::borrow::Cow<'static, str>"
-				.parse()
-				.expect("unable to parse token stream"),
-			Self::Lowercase => "::std::borrow::Cow<'static, str>"
-				.parse()
-				.expect("unable to parse token stream"),
-			Self::Uppercase => "::std::borrow::Cow<'static, str>"
-				.parse()
-				.expect("unable to parse token stream"),
-		}
-	}
 
-	pub fn as_processor_token_stream(
-		&self,
-		field_name: &Ident,
-		ty: &TokenStream2,
-	) -> TokenStream2 {
-		let fn_name = self.get_fn_name(ty);
-		let new_ty = self.get_new_type(ty);
-		let args = self.get_fn_args();
+			Preprocessor::Ip(IpPreprocessorType::V4) => quote! {
+				let #field_name: #new_ty = ::preprocess::validators::validate_ipv4(#field_name)
+					.map_err(|err| err.set_field(::std::stringify(#field_name)))?;
+			},
+			Preprocessor::Ip(IpPreprocessorType::V6) => quote! {
+				let #field_name: #new_ty = ::preprocess::validators::validate_ipv6(#field_name)
+					.map_err(|err| err.set_field(::std::stringify(#field_name)))?;
+			},
+			Preprocessor::Ip(IpPreprocessorType::Any) => quote! {
+				let #field_name: #new_ty = ::preprocess::validators::validate_ip(#field_name)
+					.map_err(|err| err.set_field(::std::stringify(#field_name)))?;
+			},
 
-		quote! {
-			let #field_name: #new_ty = #fn_name ( #field_name #args )
-				.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			Preprocessor::Trim => quote! {
+				let #field_name: #new_ty = ::preprocess::preprocessors::preprocess_trim(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
+
+			Preprocessor::Lowercase => quote! {
+				let #field_name: #new_ty = ::preprocess::preprocessors::preprocess_lowercase(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
+			Preprocessor::Uppercase => quote! {
+				let #field_name: #new_ty = ::preprocess::preprocessors::preprocess_uppercase(#field_name)
+					.map_err(|err| err.set_field(::std::stringify!(#field_name)))?;
+			},
 		}
 	}
 }
@@ -326,6 +341,19 @@ impl TryFrom<Meta> for Preprocessor {
 	///              ^^^^^^^^^^^^^^^^^^^^^
 	fn try_from(value: Meta) -> Result<Self, Self::Error> {
 		match value {
+			// #[preprocess(optional(...))]
+			Meta::List(list) if list.path.is_ident("optional") => {
+				let args = list.parse_args_with(
+					Punctuated::<Meta, Token![,]>::parse_terminated,
+				)?;
+
+				let preprocessors =
+					args.into_iter().map(Preprocessor::try_from);
+
+				Ok(Self::Optional(
+					preprocessors.collect::<Result<Vec<_>, Error>>()?,
+				))
+			}
 			// #[preprocess(none)]
 			Meta::Path(path) if path.is_ident("none") => Ok(Self::None),
 			// #[preprocess(email)]
