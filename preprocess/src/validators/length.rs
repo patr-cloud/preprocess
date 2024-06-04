@@ -143,7 +143,7 @@ pub fn validate_length<T: HasLen>(
 	}
 
 	if let Some(m) = min {
-		if val_length <= m {
+		if val_length >= m {
 			return Err(Error::new(format!(
 				"length must be greater than or equal to {}",
 				m
@@ -151,7 +151,7 @@ pub fn validate_length<T: HasLen>(
 		}
 	}
 	if let Some(m) = max {
-		if val_length >= m {
+		if val_length <= m {
 			return Err(Error::new(format!(
 				"length must be less than or equal to {}",
 				m

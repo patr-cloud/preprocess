@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-package.version = "0.5.2"
+package.version = "0.5.3"
 package.description = "Preprocesses a struct with built-in preprocessors"
 package.license = "MIT"
 package.repository = "https://github.com/patr-cloud/preprocess"
@@ -22,5 +22,5 @@ serde = { version = "1", default-features = false }
 syn = { version = "2", default-features = false }
 url = { version = "2", default-features = false }
 
-preprocess = { version = "0.5.2", path = "./preprocess" }
-preprocess-macro = { version = "0.5.2", path = "./preprocess-macro" }
+preprocess = { version = "0.5.3", path = "./preprocess" }
+preprocess-macro = { version = "0.5.3", path = "./preprocess-macro" }
