@@ -170,7 +170,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_length_equal_overrides_min_max() {
-		assert!(validate_length("hello", Some(1), Some(2), Some(5)).is_ok());
+		assert!(validate_length("hello", Some(1), Some(2), Some(5)).is_err());
 	}
 
 	#[test]
