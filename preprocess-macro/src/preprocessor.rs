@@ -102,9 +102,29 @@ impl Preprocessor {
 			Self::None => current_type.clone(),
 
 			Self::Optional(preprocessors) => {
+				let current_type = current_type
+					.to_token_stream()
+					.to_string()
+					.trim()
+					.trim_start_matches("::std::option::Option")
+					.trim()
+					.trim_start_matches(":: std :: option :: Option")
+					.trim()
+					.trim_start_matches("::core::option::Option")
+					.trim()
+					.trim_start_matches(":: core :: option :: Option")
+					.trim()
+					.trim_start_matches("Option")
+					.trim()
+					.trim_start_matches("<")
+					.trim()
+					.trim_end_matches(">")
+					.trim()
+					.parse()
+					.expect("unable to parse token stream");
 				let inner_type = preprocessors
 					.iter()
-					.fold(current_type.clone(), |ty, preprocessor| {
+					.fold(current_type, |ty, preprocessor| {
 						preprocessor.get_new_type(&ty)
 					});
 				quote! {
@@ -163,17 +183,39 @@ impl Preprocessor {
 			Preprocessor::None => quote! {},
 
 			Preprocessor::Optional(preprocessors) => {
-				let mut new_type = ty.clone();
-				let preprocessors = preprocessors
-					.iter()
-					.map(|preprocessor| {
-						new_type = preprocessor.get_new_type(&new_type);
-						preprocessor.as_processor_token_stream(
+				let (preprocessors, new_type) = preprocessors.iter().fold(
+					(
+						quote! {},
+						ty.to_token_stream()
+							.to_string()
+							.trim()
+							.trim_start_matches("::std::option::Option")
+							.trim()
+							.trim_start_matches(":: std :: option :: Option")
+							.trim()
+							.trim_start_matches("::core::option::Option")
+							.trim()
+							.trim_start_matches(":: core :: option :: Option")
+							.trim()
+							.trim_start_matches("Option")
+							.trim()
+							.trim_start_matches("<")
+							.trim()
+							.trim_end_matches(">")
+							.trim()
+							.parse()
+							.expect("unable to parse token stream"),
+					),
+					|(mut acc, new_ty), preprocessor| {
+						let new_ty = preprocessor.get_new_type(&new_ty);
+						acc.extend(preprocessor.as_processor_token_stream(
 							&format_ident!("value"),
-							&new_type,
-						)
-					})
-					.collect::<TokenStream2>();
+							&new_ty,
+						));
+
+						(acc, new_ty)
+					},
+				);
 				quote! {
 					let #field_name: ::core::option::Option<#new_type> = ::core::option::Option::map::<::core::result::Result<#new_type, ::preprocess::Error>, _>(#field_name, |value| {
 						#preprocessors
