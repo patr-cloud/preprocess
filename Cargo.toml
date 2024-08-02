@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-package.version = "0.5.6"
+package.version = "0.5.7"
 package.description = "Preprocesses a struct with built-in preprocessors"
 package.license = "MIT"
 package.repository = "https://github.com/patr-cloud/preprocess"
@@ -13,7 +13,7 @@ package.keywords = ["preprocess", "validation", "api", "test", "process"]
 members = ["preprocess", "preprocess-macro", "preprocess-test"]
 
 [workspace.dependencies]
-dashmap = { version = "5", default-features = false }
+dashmap = { version = "6", default-features = false }
 idna = { version = "1", default-features = false }
 proc-macro2 = { version = "1", default-features = false }
 quote = { version = "1", default-features = false }
@@ -22,5 +22,5 @@ serde = { version = "1", default-features = false }
 syn = { version = "2", default-features = false }
 url = { version = "2", default-features = false }
 
-preprocess = { version = "=0.5.6", path = "./preprocess" }
-preprocess-macro = { version = "=0.5.6", path = "./preprocess-macro" }
+preprocess = { version = "=0.5.7", path = "./preprocess" }
+preprocess-macro = { version = "=0.5.7", path = "./preprocess-macro" }
