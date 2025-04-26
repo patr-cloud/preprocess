@@ -556,22 +556,14 @@ impl TryFrom<Meta> for Preprocessor {
 							Ok((min, max, Some(meta.value)))
 						}
 						meta => {
-							return Err(
-								if let Some(ident) = meta.path().get_ident() {
-									Error::new(
-										meta.span(),
-										format!(
-											"unexpected argument `{}`",
-											ident,
-										),
-									)
-								} else {
-									Error::new(
-										meta.span(),
-										"unexpected argument",
-									)
-								},
-							)
+							Err(if let Some(ident) = meta.path().get_ident() {
+								Error::new(
+									meta.span(),
+									format!("unexpected argument `{}`", ident,),
+								)
+							} else {
+								Error::new(meta.span(), "unexpected argument")
+							})
 						}
 					},
 				)?;
@@ -613,22 +605,14 @@ impl TryFrom<Meta> for Preprocessor {
 							Ok((min, Some(meta.value)))
 						}
 						meta => {
-							return Err(
-								if let Some(ident) = meta.path().get_ident() {
-									Error::new(
-										meta.span(),
-										format!(
-											"unexpected argument `{}`",
-											ident,
-										),
-									)
-								} else {
-									Error::new(
-										meta.span(),
-										"unexpected argument",
-									)
-								},
-							)
+							Err(if let Some(ident) = meta.path().get_ident() {
+								Error::new(
+									meta.span(),
+									format!("unexpected argument `{}`", ident,),
+								)
+							} else {
+								Error::new(meta.span(), "unexpected argument")
+							})
 						}
 					},
 				)?;

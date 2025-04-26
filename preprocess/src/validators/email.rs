@@ -149,9 +149,9 @@ mod tests {
 	fn test_validate_email_rfc5321() {
 		// 65 character local part
 		let test = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.com";
-		assert_eq!(validate_email(test).is_ok(), false);
+		assert!(validate_email(test).is_err());
 		// 256 character domain part
 		let test = "a@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com";
-		assert_eq!(validate_email(test).is_ok(), false);
+		assert!(validate_email(test).is_err());
 	}
 }

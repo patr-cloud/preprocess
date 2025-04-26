@@ -22,19 +22,19 @@ impl HasLen for String {
 	}
 }
 
-impl<'a> HasLen for &'a String {
+impl HasLen for &String {
 	fn length(&self) -> usize {
 		self.chars().count()
 	}
 }
 
-impl<'a> HasLen for &'a str {
+impl HasLen for &str {
 	fn length(&self) -> usize {
 		self.chars().count()
 	}
 }
 
-impl<'a> HasLen for Cow<'a, str> {
+impl HasLen for Cow<'_, str> {
 	fn length(&self) -> usize {
 		self.chars().count()
 	}
@@ -46,7 +46,7 @@ impl<T> HasLen for Vec<T> {
 	}
 }
 
-impl<'a, T> HasLen for &'a Vec<T> {
+impl<T> HasLen for &Vec<T> {
 	fn length(&self) -> usize {
 		self.len()
 	}
@@ -70,7 +70,7 @@ impl<T, const N: usize> HasLen for &[T; N] {
 	}
 }
 
-impl<'a, K, V, S> HasLen for &'a HashMap<K, V, S> {
+impl<K, V, S> HasLen for &HashMap<K, V, S> {
 	fn length(&self) -> usize {
 		self.len()
 	}
@@ -82,7 +82,7 @@ impl<K, V, S> HasLen for HashMap<K, V, S> {
 	}
 }
 
-impl<'a, T, S> HasLen for &'a HashSet<T, S> {
+impl<T, S> HasLen for &HashSet<T, S> {
 	fn length(&self) -> usize {
 		self.len()
 	}
@@ -94,7 +94,7 @@ impl<T, S> HasLen for HashSet<T, S> {
 	}
 }
 
-impl<'a, K, V> HasLen for &'a BTreeMap<K, V> {
+impl<K, V> HasLen for &BTreeMap<K, V> {
 	fn length(&self) -> usize {
 		self.len()
 	}
@@ -106,7 +106,7 @@ impl<K, V> HasLen for BTreeMap<K, V> {
 	}
 }
 
-impl<'a, T> HasLen for &'a BTreeSet<T> {
+impl<T> HasLen for &BTreeSet<T> {
 	fn length(&self) -> usize {
 		self.len()
 	}
@@ -180,12 +180,12 @@ mod tests {
 
 	#[test]
 	fn test_validate_length_string_min_only() {
-		assert!(!validate_length("hello", Some(10), None, None).is_ok());
+		assert!(validate_length("hello", Some(10), None, None).is_err());
 	}
 
 	#[test]
 	fn test_validate_length_string_max_only() {
-		assert!(!validate_length("hello", None, Some(1), None).is_ok());
+		assert!(validate_length("hello", None, Some(1), None).is_err());
 	}
 
 	#[test]

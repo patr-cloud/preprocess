@@ -1,16 +1,16 @@
 [workspace]
-resolver = "2"
-package.version = "0.5.7"
-package.description = "Preprocesses a struct with built-in preprocessors"
-package.license = "MIT"
-package.repository = "https://github.com/patr-cloud/preprocess"
-package.documentation = "https://docs.rs/preprocess"
-package.homepage = "https://docs.rs/preprocess"
-package.readme = "README.md"
-package.authors = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
-package.edition = "2021"
-package.keywords = ["preprocess", "validation", "api", "test", "process"]
 members = ["preprocess", "preprocess-macro", "preprocess-test"]
+package.authors = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
+package.description = "Preprocesses a struct with built-in preprocessors"
+package.documentation = "https://docs.rs/preprocess"
+package.edition = "2024"
+package.homepage = "https://docs.rs/preprocess"
+package.keywords = ["preprocess", "validation", "api", "test", "process"]
+package.license = "MIT"
+package.readme = "README.md"
+package.repository = "https://github.com/patr-cloud/preprocess"
+package.version = "0.5.8"
+resolver = "3"
 
 [workspace.dependencies]
 dashmap = { version = "6", default-features = false }
@@ -22,5 +22,5 @@ serde = { version = "1", default-features = false }
 syn = { version = "2", default-features = false }
 url = { version = "2", default-features = false }
 
-preprocess = { version = "=0.5.7", path = "./preprocess" }
-preprocess-macro = { version = "=0.5.7", path = "./preprocess-macro" }
+preprocess = { version = "=0.5.8", path = "./preprocess" }
+preprocess-macro = { version = "=0.5.8", path = "./preprocess-macro" }

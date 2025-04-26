@@ -28,19 +28,19 @@ impl Contains for String {
 	}
 }
 
-impl<'a> Contains for &'a String {
+impl Contains for &String {
 	fn contains(&self, needle: &str) -> bool {
 		self.matches(needle).count() > 0
 	}
 }
 
-impl<'a> Contains for &'a str {
+impl Contains for &str {
 	fn contains(&self, needle: &str) -> bool {
 		self.matches(needle).count() > 0
 	}
 }
 
-impl<'a> Contains for Cow<'a, str> {
+impl Contains for Cow<'_, str> {
 	fn contains(&self, needle: &str) -> bool {
 		self.matches(needle).count() > 0
 	}
@@ -55,7 +55,7 @@ where
 	}
 }
 
-impl<'a, T> Contains for &'a Vec<T>
+impl<T> Contains for &Vec<T>
 where
 	T: Display,
 {
@@ -64,7 +64,7 @@ where
 	}
 }
 
-impl<'a, T> Contains for &'a [T]
+impl<T> Contains for &[T]
 where
 	T: Display,
 {
@@ -82,7 +82,7 @@ where
 	}
 }
 
-impl<'a, T, const N: usize> Contains for &'a [T; N]
+impl<T, const N: usize> Contains for &[T; N]
 where
 	T: Display,
 {
@@ -91,7 +91,7 @@ where
 	}
 }
 
-impl<'a, K, V, S> Contains for &'a HashMap<K, V, S>
+impl<K, V, S> Contains for &HashMap<K, V, S>
 where
 	K: Display,
 {
@@ -109,7 +109,7 @@ where
 	}
 }
 
-impl<'a, T, S> Contains for &'a HashSet<T, S>
+impl<T, S> Contains for &HashSet<T, S>
 where
 	T: Display,
 {
@@ -127,7 +127,7 @@ where
 	}
 }
 
-impl<'a, K, V> Contains for &'a BTreeMap<K, V>
+impl<K, V> Contains for &BTreeMap<K, V>
 where
 	K: Display,
 {
@@ -145,7 +145,7 @@ where
 	}
 }
 
-impl<'a, T> Contains for &'a BTreeSet<T>
+impl<T> Contains for &BTreeSet<T>
 where
 	T: Display,
 {
@@ -194,7 +194,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_contains_string_can_fail() {
-		assert!(!validate_contains("hey", "o").is_ok());
+		assert!(validate_contains("hey", "o").is_err());
 	}
 
 	#[test]
@@ -208,7 +208,7 @@ mod tests {
 	fn test_validate_contains_hashmap_key_can_fail() {
 		let mut map = HashMap::new();
 		map.insert("hey".to_string(), 1);
-		assert!(!validate_contains(map, "bob").is_ok());
+		assert!(validate_contains(map, "bob").is_err());
 	}
 
 	#[test]
@@ -222,18 +222,18 @@ mod tests {
 	#[test]
 	fn test_validate_contains_cow_can_fail() {
 		let test: Cow<'static, str> = "hey".into();
-		assert!(!validate_contains(test, "o").is_ok());
+		assert!(validate_contains(test, "o").is_err());
 		let test: Cow<'static, str> = String::from("hey").into();
-		assert!(!validate_contains(test, "o").is_ok());
+		assert!(validate_contains(test, "o").is_err());
 	}
 
 	#[test]
 	fn test_validate_contains_hashmap() {
 		let test: HashMap<String, ()> =
 			[("hey".into(), ())].into_iter().collect();
-		assert!(!validate_contains(test, "o").is_ok());
+		assert!(validate_contains(test, "o").is_err());
 		let test: HashMap<&'static str, ()> =
 			[("hey", ())].into_iter().collect();
-		assert!(!validate_contains(test, "o").is_ok());
+		assert!(validate_contains(test, "o").is_err());
 	}
 }
