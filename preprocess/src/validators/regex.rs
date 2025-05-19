@@ -5,6 +5,9 @@ use regex::Regex;
 
 use crate::utils::Error;
 
+/// This is a list of regexes that have been compiled.
+/// This is used to avoid recompiling the same regex multiple times.
+#[doc(hidden)]
 static REGEX_LIST: OnceLock<DashMap<String, Regex>> = OnceLock::new();
 
 /// Validates whether the given string matches the given regex.

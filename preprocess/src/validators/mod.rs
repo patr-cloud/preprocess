@@ -245,15 +245,26 @@
 //! }
 //! ```
 
+/// Validate if the given value contains the given substring.
 mod contains;
+/// Validate if the given value does not contain the given substring.
 mod does_not_contain;
+/// Validate if the given value is a valid domain name.
 mod domain;
+/// Validate if the given value is a valid email address.
 mod email;
+/// Empty validator. This validator will always return `Ok` with the given
+/// value. This is used for the `#[preprocess(none)]` attribute.
 mod empty;
+/// Validate if the given value is a valid IP address.
 mod ip;
+/// Validate if the given value has the required length.
 mod length;
+/// Validate if the given value is within the given range.
 mod range;
+/// Validate if the given value matches the given regular expression.
 mod regex;
+/// Validate if the given value is a valid URL.
 mod url;
 
 pub use self::{

@@ -48,8 +48,14 @@
 //! }
 //! ```
 
+/// A lowercase preprocessor that converts all the characters in the given value
+/// to lowercase using the [`to_lowercase`](`str::to_lowercase`) method.
 mod lowercase;
+/// A trim preprocessor that trims the given value using the
+/// [`trim`](`str::trim`) method.
 mod trim;
+/// An uppercase preprocessor that converts all the characters in the given
+/// value to uppercase using the [`to_uppercase`](`str::to_uppercase`) method.
 mod uppercase;
 
 pub use self::{lowercase::*, trim::*, uppercase::*};

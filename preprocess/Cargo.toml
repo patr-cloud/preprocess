@@ -1,19 +1,23 @@
 [package]
-authors.workspace = true
-description.workspace = true
-documentation.workspace = true
-edition.workspace = true
-homepage.workspace = true
-keywords.workspace = true
-license.workspace = true
 name = "preprocess"
-readme.workspace = true
-repository.workspace = true
-version.workspace = true
+
+authors.workspace       = true
+description.workspace   = true
+documentation.workspace = true
+edition.workspace       = true
+homepage.workspace      = true
+keywords.workspace      = true
+license.workspace       = true
+readme.workspace        = true
+repository.workspace    = true
+version.workspace       = true
+
+[lints]
+workspace = true
 
 [dependencies]
-dashmap = { workspace = true, features = [] }
-idna = { workspace = true, features = ["default"] }
+dashmap          = { workspace = true, features = [] }
+idna             = { workspace = true, features = ["default"] }
 preprocess-macro = { workspace = true, features = [] }
-regex = { workspace = true, features = ["default"] }
-url = { workspace = true, features = ["default"] }
+regex            = { workspace = true, features = ["default"] }
+url              = { workspace = true, features = ["default"] }

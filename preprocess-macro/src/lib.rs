@@ -1,6 +1,8 @@
+//! This crate provides a procedural macro to preprocess structs and enums.
+
 use proc_macro::TokenStream;
 use quote::ToTokens;
-use syn::{parse::Parse, Attribute, ItemEnum, ItemStruct, Token};
+use syn::{Attribute, ItemEnum, ItemStruct, Token, parse::Parse};
 
 mod ext_traits;
 mod preprocessor;
@@ -8,8 +10,13 @@ mod process_enum;
 mod process_struct;
 mod processed_fields;
 
+/// The `Item` enum represents either a struct or an enum, along with its
+/// attributes and visibility. It is used to parse the input of the procedural
+/// macro and to process the item accordingly.
 enum Item {
+	/// Represents a struct item.
 	Struct(ItemStruct),
+	/// Represents an enum item.
 	Enum(ItemEnum),
 }
 
@@ -42,6 +49,8 @@ impl From<Item> for TokenStream {
 }
 
 impl Item {
+	/// Processes the item and returns a `TokenStream` with the processed
+	/// version of the item.
 	fn into_processed(self, strict_mode: bool) -> TokenStream {
 		let result = match self {
 			Item::Struct(item) => {
@@ -57,6 +66,8 @@ impl Item {
 	}
 }
 
+/// A procedural macro that preprocesses structs and enums in a synchronous
+/// context.
 #[proc_macro_attribute]
 pub fn sync(args: TokenStream, input: TokenStream) -> TokenStream {
 	let input = syn::parse_macro_input!(input as Item);

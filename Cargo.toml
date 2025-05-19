@@ -1,26 +1,37 @@
 [workspace]
-members = ["preprocess", "preprocess-macro", "preprocess-test"]
-package.authors = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
-package.description = "Preprocesses a struct with built-in preprocessors"
+members               = ["preprocess", "preprocess-macro", "preprocess-test"]
+package.authors       = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
+package.description   = "Preprocesses a struct with built-in preprocessors"
 package.documentation = "https://docs.rs/preprocess"
-package.edition = "2024"
-package.homepage = "https://docs.rs/preprocess"
-package.keywords = ["preprocess", "validation", "api", "test", "process"]
-package.license = "MIT"
-package.readme = "README.md"
-package.repository = "https://github.com/patr-cloud/preprocess"
-package.version = "0.5.8"
-resolver = "3"
+package.edition       = "2024"
+package.homepage      = "https://docs.rs/preprocess"
+package.keywords      = ["api", "preprocess", "process", "test", "validation"]
+package.license       = "MIT"
+package.readme        = "README.md"
+package.repository    = "https://github.com/patr-cloud/preprocess"
+package.version       = "0.5.8"
+resolver              = "3"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code  = "forbid"
+
+[workspace.lints.clippy]
+all                           = "warn"
+cast_possible_truncation      = "warn"
+cast_possible_wrap            = "warn"
+cast_sign_loss                = "warn"
+missing_docs_in_private_items = "warn"
 
 [workspace.dependencies]
-dashmap = { version = "6", default-features = false }
-idna = { version = "1", default-features = false }
-proc-macro2 = { version = "1", default-features = false }
-quote = { version = "1", default-features = false }
-regex = { version = "1", default-features = false }
-serde = { version = "1", default-features = false }
-syn = { version = "2", default-features = false }
-url = { version = "2", default-features = false }
+dashmap     = { default-features = false, version = "6" }
+idna        = { default-features = false, version = "1" }
+proc-macro2 = { default-features = false, version = "1" }
+quote       = { default-features = false, version = "1" }
+regex       = { default-features = false, version = "1" }
+serde       = { default-features = false, version = "1" }
+syn         = { default-features = false, version = "2" }
+url         = { default-features = false, version = "2" }
 
-preprocess = { version = "=0.5.8", path = "./preprocess" }
+preprocess       = { version = "=0.5.8", path = "./preprocess" }
 preprocess-macro = { version = "=0.5.8", path = "./preprocess-macro" }
