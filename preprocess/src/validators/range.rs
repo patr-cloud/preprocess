@@ -16,20 +16,20 @@ pub fn validate_range<T>(
 where
 	T: PartialOrd + PartialEq,
 {
-	if let Some(max) = max {
-		if value > max {
-			return Err(Error::new(
-				"value must be less than or equal to the maximum",
-			));
-		}
+	if let Some(max) = max &&
+		value > max
+	{
+		return Err(Error::new(
+			"value must be less than or equal to the maximum",
+		));
 	}
 
-	if let Some(min) = min {
-		if value < min {
-			return Err(Error::new(
-				"value must be greater than or equal to the minimum",
-			));
-		}
+	if let Some(min) = min &&
+		value < min
+	{
+		return Err(Error::new(
+			"value must be greater than or equal to the minimum",
+		));
 	}
 
 	Ok(value)

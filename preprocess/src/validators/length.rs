@@ -136,27 +136,27 @@ pub fn validate_length<T: HasLen>(
 ) -> Result<T, Error> {
 	let val_length = value.length();
 
-	if let Some(m) = equal {
-		if val_length != m {
-			return Err(Error::new(format!("length must be equal to {}", m)));
-		}
+	if let Some(m) = equal &&
+		val_length != m
+	{
+		return Err(Error::new(format!("length must be equal to {}", m)));
 	}
 
-	if let Some(m) = min {
-		if val_length < m {
-			return Err(Error::new(format!(
-				"length must be greater than or equal to {}",
-				m
-			)));
-		}
+	if let Some(m) = min &&
+		val_length < m
+	{
+		return Err(Error::new(format!(
+			"length must be greater than or equal to {}",
+			m
+		)));
 	}
-	if let Some(m) = max {
-		if val_length > m {
-			return Err(Error::new(format!(
-				"length must be less than or equal to {}",
-				m
-			)));
-		}
+	if let Some(m) = max &&
+		val_length > m
+	{
+		return Err(Error::new(format!(
+			"length must be less than or equal to {}",
+			m
+		)));
 	}
 
 	Ok(value)
