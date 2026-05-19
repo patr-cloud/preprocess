@@ -234,7 +234,7 @@ dependencies = [
 
 [[package]]
 name = "preprocess"
-version = "0.5.10"
+version = "0.5.11"
 dependencies = [
  "dashmap",
  "idna",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "preprocess-macro"
-version = "0.5.10"
+version = "0.5.11"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -255,7 +255,7 @@ dependencies = [
 
 [[package]]
 name = "preprocess-test"
-version = "0.5.10"
+version = "0.5.11"
 dependencies = [
  "preprocess",
  "serde",

@@ -42,6 +42,45 @@ pub enum EnumRequest {
 	},
 }
 
+// Regression: `#[cfg]` on fields must ride along onto the destructure pattern
+// and per-field preprocessor statements in the generated `preprocess()` body.
+// Uses `cfg(any())` / `cfg(not(any()))` so the test is deterministic on every
+// platform without needing a feature flag.
+
+/// Cfg-gated regression struct.
+#[preprocess::sync]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CfgPath {
+	#[cfg(any())]
+	/// The `cfg`-disabled branch — never compiled in this build, but the macro
+	/// must still emit a destructure pattern that accommodates it.
+	pub workspace_id: u64,
+	#[cfg(not(any()))]
+	#[preprocess(trim, length(min = 1))]
+	/// The `cfg`-enabled branch.
+	pub workspace_id: String,
+	#[preprocess(trim)]
+	/// Always-on field, exercises the non-cfg path alongside.
+	pub repo_name: String,
+}
+
+/// Cfg-gated regression enum variant.
+#[preprocess::sync]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum CfgEnum {
+	#[allow(dead_code)]
+	/// Cfg-gated regression variant.
+	Variant {
+		#[cfg(any())]
+		/// Disabled branch — never present in this build.
+		unused: u64,
+		#[cfg(not(any()))]
+		#[preprocess(trim)]
+		/// Enabled branch.
+		name: String,
+	},
+}
+
 fn main() {
 	let _processed: LoginRequestProcessed =
 		Preprocessable::preprocess(LoginRequest {
@@ -54,5 +93,18 @@ fn main() {
 			},
 		})
 		.unwrap();
+
+	let _cfg_path: CfgPathProcessed = Preprocessable::preprocess(CfgPath {
+		workspace_id: "  abc  ".to_string(),
+		repo_name: "  repo  ".to_string(),
+	})
+	.unwrap();
+
+	let _cfg_enum: CfgEnumProcessed =
+		Preprocessable::preprocess(CfgEnum::Variant {
+			name: "  hello  ".to_string(),
+		})
+		.unwrap();
+
 	println!("Hello, world!");
 }

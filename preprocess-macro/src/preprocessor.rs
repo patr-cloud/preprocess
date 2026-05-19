@@ -1,9 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use regex::Regex;
 use syn::{
-	punctuated::Punctuated,
-	spanned::Spanned,
 	Attribute,
 	Error,
 	Expr,
@@ -14,6 +12,8 @@ use syn::{
 	Meta,
 	Path,
 	Token,
+	punctuated::Punctuated,
+	spanned::Spanned,
 };
 
 use crate::ext_traits::{ExprExt, LitExpr};
@@ -500,7 +500,7 @@ impl TryFrom<Meta> for Preprocessor {
 						return Err(Error::new(
 							meta.span(),
 							"expected string literal",
-						))
+						));
 					}
 				};
 				Ok(Self::Type(r#type))

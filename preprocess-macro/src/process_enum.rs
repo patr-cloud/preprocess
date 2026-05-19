@@ -1,8 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use syn::{
-	token::Brace,
 	Attribute,
 	Error,
 	Field,
@@ -16,9 +15,11 @@ use syn::{
 	Type,
 	Variant,
 	Visibility,
+	token::Brace,
 };
 
 use crate::{
+	ext_traits::cfg_attrs,
 	preprocessor::Preprocessor,
 	processed_fields::{ProcessedFields, ProcessedNamed, ProcessedUnnamed},
 };
@@ -245,8 +246,14 @@ pub fn into_processed(
 		let field_names_destructured = match &fields {
 			ProcessedFields::Unit => TokenStream2::new(),
 			ProcessedFields::Named(ProcessedNamed { named, .. }) => {
-				let named =
-					named.iter().map(|(field, _)| field.ident.clone().unwrap());
+				let named = named.iter().map(|(field, _)| {
+					let cfgs = cfg_attrs(&field.attrs);
+					let ident = field.ident.as_ref().unwrap();
+					quote! {
+						#(#cfgs)*
+						#ident
+					}
+				});
 				quote! {
 					{
 						#(#named),*
@@ -254,10 +261,15 @@ pub fn into_processed(
 				}
 			}
 			ProcessedFields::Unnamed(ProcessedUnnamed { unnamed, .. }) => {
-				let unnamed = unnamed
-					.iter()
-					.enumerate()
-					.map(|(index, _)| format_ident!("field_{}", index));
+				let unnamed =
+					unnamed.iter().enumerate().map(|(index, (field, _))| {
+						let cfgs = cfg_attrs(&field.attrs);
+						let ident = format_ident!("field_{}", index);
+						quote! {
+							#(#cfgs)*
+							#ident
+						}
+					});
 				quote! {
 					(
 						#(#unnamed),*
@@ -266,23 +278,27 @@ pub fn into_processed(
 			}
 		};
 
-		let field_preprocessors = match &fields {
+		let field_preprocessors: Vec<TokenStream2> = match &fields {
 			ProcessedFields::Unit => vec![],
 			ProcessedFields::Named(ProcessedNamed { named, .. }) => named
 				.iter()
 				.flat_map(|(field, preprocessors)| {
+					let cfgs = cfg_attrs(&field.attrs);
 					preprocessors
 						.iter()
 						.fold(
-							(quote! {}, field.ty.to_token_stream()),
+							(Vec::new(), field.ty.to_token_stream()),
 							|(mut acc, new_ty), preprocessor| {
 								let new_ty = preprocessor.get_new_type(&new_ty);
-								acc.extend(
-									preprocessor.as_processor_token_stream(
+								let stmt = preprocessor
+									.as_processor_token_stream(
 										field.ident.as_ref().unwrap(),
 										&new_ty,
-									),
-								);
+									);
+								acc.push(quote! {
+									#(#cfgs)*
+									#stmt
+								});
 
 								(acc, new_ty)
 							},
@@ -295,17 +311,21 @@ pub fn into_processed(
 					.iter()
 					.enumerate()
 					.flat_map(|(index, (field, preprocessors))| {
+						let cfgs = cfg_attrs(&field.attrs);
 						preprocessors
 							.iter()
 							.fold(
-								(quote! {}, field.ty.to_token_stream()),
+								(Vec::new(), field.ty.to_token_stream()),
 								|(mut acc, new_ty), preprocessor| {
-									acc.extend(
-										preprocessor.as_processor_token_stream(
+									let stmt = preprocessor
+										.as_processor_token_stream(
 											&format_ident!("field_{}", index),
 											&new_ty,
-										),
-									);
+										);
+									acc.push(quote! {
+										#(#cfgs)*
+										#stmt
+									});
 
 									(acc, preprocessor.get_new_type(&new_ty))
 								},

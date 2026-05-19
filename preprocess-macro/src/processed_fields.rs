@@ -1,12 +1,12 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
 use syn::{
-	token::{Brace, Paren},
 	Error,
 	Field,
 	Fields,
 	FieldsNamed,
 	FieldsUnnamed,
+	token::{Brace, Paren},
 };
 
 use crate::preprocessor::Preprocessor;
