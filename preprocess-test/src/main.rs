@@ -81,6 +81,19 @@ pub enum CfgEnum {
 	},
 }
 
+/// Generic wrapper regression: nested `#[preprocess]` on a type-param field.
+/// Pre-fix the macro emitted a bogus `QProcessed` field type instead of
+/// projecting through `<Q as Preprocessable>::Processed`.
+#[preprocess::sync]
+pub struct Wrapper<Q: Preprocessable = ()> {
+	#[preprocess(range(min = 1, max = 100))]
+	/// A plain validated field alongside the generic one.
+	pub count: usize,
+	#[preprocess]
+	/// The generic payload, preprocessed through the trait projection.
+	pub inner: Q,
+}
+
 fn main() {
 	let _processed: LoginRequestProcessed =
 		Preprocessable::preprocess(LoginRequest {
@@ -103,6 +116,21 @@ fn main() {
 	let _cfg_enum: CfgEnumProcessed =
 		Preprocessable::preprocess(CfgEnum::Variant {
 			name: "  hello  ".to_string(),
+		})
+		.unwrap();
+
+	let _wrapper: WrapperProcessed<LoginRequest> =
+		Preprocessable::preprocess(Wrapper {
+			count: 42,
+			inner: LoginRequest {
+				username: "  HelloWorld  ".to_string(),
+				password: "  HelloWorld  ".to_string(),
+				nested: EnumRequest::VariantA {
+					username: "  HelloWorld  ".to_string(),
+					password: "  HelloWorld  ".to_string(),
+					optional: Some("  HelloWorld  ".to_string()),
+				},
+			},
 		})
 		.unwrap();
 

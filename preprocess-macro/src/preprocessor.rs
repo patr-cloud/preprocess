@@ -143,10 +143,9 @@ impl Preprocessor {
 			Self::DoesNotContain(_) => current_type.clone(),
 			Self::Custom(_) => current_type.clone(),
 			Self::Regex(_) => current_type.clone(),
-			Self::Nested => {
-				let current_type = current_type.to_string();
-				format_ident!("{}Processed", current_type).to_token_stream()
-			}
+			Self::Nested => quote! {
+				<#current_type as ::preprocess::Preprocessable>::Processed
+			},
 			Self::Type(r#type) => {
 				r#type.parse().expect("unable to parse token stream")
 			}
